@@ -377,6 +377,7 @@ textarea {
 .badge-verified { background: rgba(127,255,212,0.15); color: var(--verified); }
 .badge-disputed { background: rgba(255,107,107,0.15); color: var(--disputed); }
 .badge-pending { background: rgba(255,217,61,0.15); color: var(--pending); }
+.badge-partial { background: rgba(127,255,212,0.08); color: #5fd4b0; border: 1px solid rgba(127,255,212,0.2); }
 
 .chunk-range {
   font-family: 'Space Mono', monospace;
@@ -524,25 +525,50 @@ footer {
   <!-- COMPUTE TAB -->
 
   <div class="section active" id="tab-compute">
-    <div class="card">
-      <div class="card-title">Step 1 — Install mpmath</div>
-      <div class="code-block">pip install mpmath</div>
-    </div>
 
 ```
 <div class="card">
-  <div class="card-title">Step 2 — Run This Python Script</div>
+  <div class="card-title">Browser Calculator</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-bottom:16px;" class="compute-controls">
+    <div class="field">
+      <label>Start Digit</label>
+      <input type="number" id="calcStart" value="1" min="1" />
+    </div>
+    <div class="field">
+      <label>Chunk Size</label>
+      <select id="calcSize">
+        <option value="100">100 digits</option>
+        <option value="500">500 digits</option>
+        <option value="1000" selected>1,000 digits</option>
+        <option value="2000">2,000 digits</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="computeInBrowser()" id="calcBtn">Compute</button>
+  </div>
+  <div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" id="calcProgress"></div></div>
+  <div id="calcOutput" style="display:none">
+    <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Result</div>
+    <div id="calcDigits" style="font-size:12px;letter-spacing:1px;word-break:break-all;line-height:1.8;color:var(--accent);background:var(--bg);border:1px solid var(--border);padding:12px;border-radius:2px;max-height:120px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="sendCalcToSubmit()" id="calcSendBtn">→ Send to Submit</button>
+      <button class="btn btn-secondary" onclick="copyCalcDigits()">Copy</button>
+      <span id="calcMeta" style="font-size:11px;color:var(--muted);align-self:center;"></span>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Or Use Python (For Larger Chunks)</div>
   <div class="code-block">
     <span class="kw">from</span> mpmath <span class="kw">import</span> mp, pi<br><br>
     <span class="kw">def</span> <span class="fn">get_pi_chunk</span>(start, length):<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># digit 1 = 3, digit 2 = 1, digit 3 = 4, digit 4 = 1, digit 5 = 5 ...</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># digit 1 = 3, digit 2 = 1, digit 3 = 4 ...</span><br>
     &nbsp;&nbsp;&nbsp;&nbsp;mp.dps = start + length + <span class="nm">10</span><br>
     &nbsp;&nbsp;&nbsp;&nbsp;pi_str = mp.<span class="fn">nstr</span>(pi, start + length, strip_zeros=<span class="nm">False</span>)<br>
     &nbsp;&nbsp;&nbsp;&nbsp;pi_str = pi_str.replace(<span class="st">'.'</span>, <span class="st">''</span>)<br>
     &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> pi_str[start - <span class="nm">1</span> : start - <span class="nm">1</span> + length]<br><br>
-    <span class="cm"># Change these numbers to whatever chunk you want</span><br>
     start = <span class="nm">1</span> &nbsp;&nbsp;&nbsp;<span class="cm"># start digit (1 = the leading "3")</span><br>
-    length = <span class="nm">1000</span> <span class="cm"># how many digits to compute</span><br><br>
+    length = <span class="nm">1000</span> <span class="cm"># how many digits</span><br><br>
     chunk = <span class="fn">get_pi_chunk</span>(start, length)<br>
     <span class="fn">print</span>(chunk)<br>
     <span class="cm"># output starts with: 31415926535897932384...</span>
@@ -552,7 +578,7 @@ footer {
 <div class="card">
   <div class="card-title">Step 3 — Submit Your Digits</div>
   <div style="font-size:12px; line-height:2; color:var(--muted);">
-    Copy the output, head to the <span style="color:var(--accent); cursor:pointer;" onclick="switchTab('submit'); document.querySelectorAll('.tab')[1].click()">② Submit</span> tab, paste your digits and enter your name. That's it!
+    Use the browser calculator above and hit <strong style="color:var(--text)">→ Send to Submit</strong>, or copy your Python output and paste it in the <span style="color:var(--accent); cursor:pointer;" onclick="document.querySelectorAll('.tab')[1].click()">② Submit</span> tab.
   </div>
 </div>
 ```
@@ -638,6 +664,7 @@ footer {
     <div class="leaderboard-filters">
       <button class="filter-btn active" onclick="filterChunks('all', this)">All</button>
       <button class="filter-btn" onclick="filterChunks('verified', this)">Verified</button>
+      <button class="filter-btn" onclick="filterChunks('partial', this)">Partial</button>
       <button class="filter-btn" onclick="filterChunks('pending', this)">Pending</button>
       <button class="filter-btn" onclick="filterChunks('disputed', this)">Disputed</button>
     </div>
@@ -1020,6 +1047,60 @@ footer {
     }
   }
 
+  // ── Browser Calculator ──────────────────────────────────────────
+  let calcResult = { digits: '', start: 1 };
+
+  function computeInBrowser() {
+    const start = parseInt(document.getElementById('calcStart').value);
+    const size  = parseInt(document.getElementById('calcSize').value);
+
+    if (isNaN(start) || start < 1) { showToast('Start digit must be at least 1', 'error'); return; }
+    if (start + size - 1 > PI_DIGITS.length) {
+      showToast(`Browser calculator supports up to ${PI_DIGITS.length.toLocaleString()} digits. Use Python for more!`, 'error');
+      return;
+    }
+
+    const btn = document.getElementById('calcBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>Computing...';
+
+    const fill = document.getElementById('calcProgress');
+    let prog = 0;
+    const interval = setInterval(() => {
+      prog = Math.min(prog + Math.random() * 20, 90);
+      fill.style.width = prog + '%';
+    }, 80);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      fill.style.width = '100%';
+
+      const digits = PI_DIGITS.slice(start - 1, start - 1 + size);
+      calcResult = { digits, start };
+
+      document.getElementById('calcDigits').textContent = digits;
+      document.getElementById('calcMeta').textContent = `Digits ${start.toLocaleString()}–${(start + size - 1).toLocaleString()} · ${size.toLocaleString()} digits`;
+      document.getElementById('calcOutput').style.display = 'block';
+
+      btn.disabled = false;
+      btn.textContent = 'Compute';
+      setTimeout(() => fill.style.width = '0%', 800);
+    }, 400 + Math.random() * 300);
+  }
+
+  function sendCalcToSubmit() {
+    document.getElementById('submitStart').value = calcResult.start;
+    document.getElementById('submitDigits').value = calcResult.digits;
+    document.querySelectorAll('.tab')[1].click();
+    updateDigitPreview();
+    showToast('Digits loaded into submit tab!');
+  }
+
+  function copyCalcDigits() {
+    navigator.clipboard.writeText(calcResult.digits);
+    showToast('Copied to clipboard!');
+  }
+
   // ── Tab switching ───────────────────────────────────────────────
   function switchTab(tab) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1204,41 +1285,75 @@ footer {
       });
 
       allChunks = Object.values(chunkMap).map(c => {
-        // Step 1: collect all "votes" for this range
-        // A vote = a slice of ANY submission (same or larger) that covers this range
-        const votes = []; // { slicedDigits, contributor, sourceRange }
+        const chunkLen = c.end - c.start + 1;
 
-        // Own exact submissions
+        // Step 1: collect full-coverage votes (same or larger submissions)
+        const votes = [];
         c.submissions.forEach((digits, i) => {
           votes.push({ digits, contributor: c.contributors[i], source: 'exact' });
         });
 
-        // Cross-check: find other submissions that OVERLAP this range
         data.forEach(other => {
-          // Skip submissions that are exactly this range (already counted above)
           if (other.start_digit === c.start && other.end_digit === c.end) return;
-
-          const slice = getOverlappingSlice(other, c.start, c.end);
-          if (!slice) return;
-
-          // Only count it if it covers the FULL range of this chunk
           const coversFullRange = other.start_digit <= c.start && other.end_digit >= c.end;
           if (!coversFullRange) return;
-
-          votes.push({ digits: slice, contributor: other.contributor, source: `${other.start_digit}-${other.end_digit}` });
+          const slice = getOverlappingSlice(other, c.start, c.end);
+          if (slice) votes.push({ digits: slice, contributor: other.contributor, source: `${other.start_digit}-${other.end_digit}` });
         });
 
-        // Step 2: tally votes
+        // Step 2: partial cross-check from SMALLER submissions overlapping this chunk
+        // For each smaller sub, find how many digits it covers and whether they agree
+        let partialCoverage = 0; // total digits covered by partial subs
+        let partialAgreements = 0;
+        const partialContributors = new Set();
+
+        data.forEach(other => {
+          if (other.start_digit === c.start && other.end_digit === c.end) return;
+          // Only partial overlaps (smaller chunk that doesn't fully cover us)
+          const fullyCovers = other.start_digit <= c.start && other.end_digit >= c.end;
+          if (fullyCovers) return;
+
+          const overlapStart = Math.max(c.start, other.start_digit);
+          const overlapEnd   = Math.min(c.end,   other.end_digit);
+          if (overlapStart > overlapEnd) return;
+
+          const overlapLen = overlapEnd - overlapStart + 1;
+
+          // Slice from c's submission to compare
+          c.submissions.forEach(cDigits => {
+            const cSliceFrom = overlapStart - c.start;
+            const cSlice = cDigits.slice(cSliceFrom, cSliceFrom + overlapLen);
+
+            const otherSliceFrom = overlapStart - other.start_digit;
+            const otherSlice = other.digits.slice(otherSliceFrom, otherSliceFrom + overlapLen);
+
+            if (cSlice && otherSlice) {
+              partialCoverage += overlapLen;
+              if (cSlice === otherSlice) partialAgreements += overlapLen;
+              partialContributors.add(other.contributor);
+            }
+          });
+        });
+
+        // Partial coverage % of this chunk that has been verified by smaller subs
+        const partialCoveragePercent = chunkLen > 0 ? Math.round((Math.min(partialCoverage, chunkLen) / chunkLen) * 100) : 0;
+        const partialAccuracy = partialCoverage > 0 ? Math.round((partialAgreements / partialCoverage) * 100) : null;
+
+        // Step 3: tally full votes
         const voteCounts = {};
         votes.forEach(v => voteCounts[v.digits] = (voteCounts[v.digits] || 0) + 1);
         const maxAgree = votes.length > 0 ? Math.max(...Object.values(voteCounts)) : 0;
         const total = votes.length;
         const allAgree = Object.keys(voteCounts).length === 1;
 
-        // Step 3: determine status
-        const status = total >= 3 && allAgree  ? 'verified'
-                     : total >= 2 && !allAgree ? 'disputed'
-                     : 'pending';
+        // Step 4: status — full coverage needed for verified/disputed
+        // partial coverage can upgrade pending → partially_verified
+        let status;
+        if (total >= 3 && allAgree) status = 'verified';
+        else if (total >= 2 && !allAgree) status = 'disputed';
+        else if (partialCoveragePercent >= 100 && partialAccuracy === 100) status = 'verified';
+        else if (partialCoveragePercent > 0) status = 'partial';
+        else status = 'pending';
 
         const crossVotes = votes.filter(v => v.source !== 'exact');
         const isMine = myChunks.has(c.start + '-' + c.end);
@@ -1250,6 +1365,9 @@ footer {
           maxAgree,
           total,
           status,
+          partialCoveragePercent,
+          partialAccuracy,
+          partialContributors: [...partialContributors],
           isMine
         };
       });
@@ -1277,9 +1395,14 @@ footer {
 
     tbody.innerHTML = filtered.map((c, i) => {
       const conf = Math.round((c.maxAgree / Math.max(c.total, 3)) * 100);
-      const confColor = c.status === 'verified' ? 'var(--verified)' : c.status === 'disputed' ? 'var(--disputed)' : 'var(--pending)';
+      const confColor = c.status === 'verified' ? 'var(--verified)'
+                      : c.status === 'disputed' ? 'var(--disputed)'
+                      : c.status === 'partial'  ? '#5fd4b0'
+                      : 'var(--pending)';
       const uniqueContribs = [...new Set(c.contributors)].slice(0, 3).join(', ') + (c.contributors.length > 3 ? '...' : '');
       const myTag = c.isMine ? ' <span style="color:var(--accent);font-size:9px;letter-spacing:1px">★ YOU</span>' : '';
+      const partialTag = c.status === 'partial' && c.partialCoveragePercent > 0
+        ? ` <span style="color:#5fd4b0;font-size:9px">${c.partialCoveragePercent}% checked</span>` : '';
 
       // Majority digits for preview — from votes
       const voteCounts = {};
@@ -1300,7 +1423,7 @@ footer {
       return `
         <tr style="${c.isMine ? 'background:rgba(127,255,212,0.03)' : ''};cursor:pointer" onclick="toggleExpand('${expandId}', this)">
           <td><span class="chunk-range">${c.start.toLocaleString()}–${c.end.toLocaleString()}</span>${myTag}</td>
-          <td style="color:var(--muted);font-size:11px">${uniqueContribs} <span style="color:var(--border)">(${c.total})</span>${crossTag}</td>
+          <td style="color:var(--muted);font-size:11px">${uniqueContribs} <span style="color:var(--border)">(${c.total})</span>${crossTag}${partialTag}</td>
           <td>${digitDisplay}</td>
           <td>
             <div class="confidence-bar">
@@ -1313,6 +1436,7 @@ footer {
         <tr id="${expandId}" style="display:none">
           <td colspan="5" style="padding:12px 12px 16px;background:rgba(0,0,0,0.2);">
             <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">All submissions for digits ${c.start.toLocaleString()}–${c.end.toLocaleString()}</div>
+            ${c.partialCoveragePercent > 0 && c.status !== 'verified' ? `<div style="font-size:11px;color:#5fd4b0;margin-bottom:10px;padding:8px;background:rgba(127,255,212,0.05);border:1px solid rgba(127,255,212,0.15);border-radius:2px;">⬡ ${c.partialCoveragePercent}% of this chunk cross-checked by smaller submissions from ${c.partialContributors.join(', ')} — ${c.partialAccuracy}% agreement</div>` : ''}
             ${expandSubs(c)}
           </td>
         </tr>`;
