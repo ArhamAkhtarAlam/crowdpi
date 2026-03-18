@@ -1296,20 +1296,6 @@ footer {
 
       // Build per-contributor expanded rows
       const expandId = 'expand-' + i;
-      const uniqueSubs = Object.entries(subCounts).map(([digits, count]) => {
-        const contributor = c.contributors[c.submissions.indexOf(digits)] || '?';
-        const preview100 = digits.slice(0, 100);
-        const isFakeish = /^(.)\1{9,}/.test(digits); // 10+ repeated same digit
-        const fakeWarning = isFakeish ? ' <span style="color:var(--disputed);font-size:9px">⚠ POSSIBLY FAKE</span>' : '';
-        return `
-          <div style="margin-bottom:12px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:2px;">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;">
-              <span>Submitted by <strong style="color:var(--text)">${contributor}</strong> · ${count} time${count>1?'s':''}${fakeWarning}</span>
-            </div>
-            <div style="font-size:12px;letter-spacing:1px;word-break:break-all;color:var(--accent);line-height:1.8">${preview100}${digits.length > 100 ? '<span style="color:var(--muted)">…</span>' : ''}</div>
-            ${digits.length > 100 ? `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 10px;font-size:10px" onclick="showFullDigitsModal('${c.start}','${c.end}',\`${digits.replace(/`/g,'')}\`)">See all ${digits.length.toLocaleString()} digits</button>` : ''}
-          </div>`;
-      }).join('');
 
       return `
         <tr style="${c.isMine ? 'background:rgba(127,255,212,0.03)' : ''};cursor:pointer" onclick="toggleExpand('${expandId}', this)">
