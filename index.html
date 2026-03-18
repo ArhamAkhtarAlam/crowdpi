@@ -1190,6 +1190,7 @@ footer {
     btn.innerHTML = '<span class="loading"></span>Submitting...';
 
     try {
+      await supabaseFetch('pi_submissions', {
         method: 'POST',
         body: JSON.stringify({
           start_digit: start,
