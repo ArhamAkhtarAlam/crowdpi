@@ -1162,7 +1162,7 @@ footer {
     const end = start + digits.length - 1;
     const chunkKey = start + '-' + end;
 
-    // Cookie check — prevent duplicate submission
+    // Cookie check — prevent duplicate submission from this browser
     if (getSubmittedChunks().has(chunkKey)) {
       showToast('You already submitted digits ' + start.toLocaleString() + '–' + end.toLocaleString() + '!', 'error');
       return;
@@ -1170,11 +1170,26 @@ footer {
 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="loading"></span>Submitting...';
+    btn.innerHTML = '<span class="loading"></span>Checking...';
     document.getElementById('submitStatus').textContent = '';
 
+    // DB-level check — has this username already submitted this exact range?
     try {
-      await supabaseFetch('pi_submissions', {
+      const existing = await supabaseFetch(
+        `pi_submissions?select=id&contributor=eq.${encodeURIComponent(name)}&start_digit=eq.${start}&end_digit=eq.${end}&limit=1`,
+        { prefer: 'return=representation' }
+      );
+      if (existing && existing.length > 0) {
+        showToast(`${name} already submitted this exact range!`, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Submit Chunk';
+        return;
+      }
+    } catch(e) { /* non-fatal, proceed */ }
+
+    btn.innerHTML = '<span class="loading"></span>Submitting...';
+
+    try {
         method: 'POST',
         body: JSON.stringify({
           start_digit: start,
@@ -1288,28 +1303,41 @@ footer {
         const chunkLen = c.end - c.start + 1;
 
         // Step 1: collect full-coverage votes (same or larger submissions)
+        // One vote per contributor max — deduplicate at collection time
         const votes = [];
+        const votedContributors = new Set();
+
+        // Own exact submissions — one per contributor
         c.submissions.forEach((digits, i) => {
-          votes.push({ digits, contributor: c.contributors[i], source: 'exact' });
+          const contrib = c.contributors[i];
+          if (votedContributors.has(contrib)) return;
+          votedContributors.add(contrib);
+          votes.push({ digits, contributor: contrib, source: 'exact' });
         });
 
+        // Cross-votes from larger submissions — one per contributor, skip if already voted exactly
         data.forEach(other => {
           if (other.start_digit === c.start && other.end_digit === c.end) return;
+          if (votedContributors.has(other.contributor)) return; // already has an exact vote OR already cross-voted
           const coversFullRange = other.start_digit <= c.start && other.end_digit >= c.end;
           if (!coversFullRange) return;
           const slice = getOverlappingSlice(other, c.start, c.end);
-          if (slice) votes.push({ digits: slice, contributor: other.contributor, source: `${other.start_digit}-${other.end_digit}` });
+          if (slice) {
+            votedContributors.add(other.contributor);
+            votes.push({ digits: slice, contributor: other.contributor, source: `${other.start_digit}-${other.end_digit}` });
+          }
         });
 
-        // Step 2: partial cross-check from SMALLER submissions overlapping this chunk
-        // For each smaller sub, find how many digits it covers and whether they agree
-        let partialCoverage = 0; // total digits covered by partial subs
+        // Step 2: partial cross-check from SMALLER submissions — one per contributor
+        let partialCoverage = 0;
         let partialAgreements = 0;
         const partialContributors = new Set();
+        const partialSeenContributors = new Set();
 
         data.forEach(other => {
           if (other.start_digit === c.start && other.end_digit === c.end) return;
-          // Only partial overlaps (smaller chunk that doesn't fully cover us)
+          if (partialSeenContributors.has(other.contributor)) return; // one partial vote per contributor
+          if (votedContributors.has(other.contributor)) return; // already has an exact or full cross-vote — can't self-verify
           const fullyCovers = other.start_digit <= c.start && other.end_digit >= c.end;
           if (fullyCovers) return;
 
@@ -1331,6 +1359,7 @@ footer {
               partialCoverage += overlapLen;
               if (cSlice === otherSlice) partialAgreements += overlapLen;
               partialContributors.add(other.contributor);
+              partialSeenContributors.add(other.contributor);
             }
           });
         });
@@ -1339,7 +1368,7 @@ footer {
         const partialCoveragePercent = chunkLen > 0 ? Math.round((Math.min(partialCoverage, chunkLen) / chunkLen) * 100) : 0;
         const partialAccuracy = partialCoverage > 0 ? Math.round((partialAgreements / partialCoverage) * 100) : null;
 
-        // Step 3: tally full votes
+        // Tally votes (already deduplicated at collection time)
         const voteCounts = {};
         votes.forEach(v => voteCounts[v.digits] = (voteCounts[v.digits] || 0) + 1);
         const maxAgree = votes.length > 0 ? Math.max(...Object.values(voteCounts)) : 0;
