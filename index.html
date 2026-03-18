@@ -562,29 +562,49 @@ footer {
   <!-- SUBMIT TAB -->
 
   <div class="section" id="tab-submit">
-    <div class="card">
-      <div class="card-title">Submit Your Chunk</div>
-      <div class="submit-grid">
-        <div class="field">
-          <label>Start Digit</label>
-          <input type="number" id="submitStart" value="1" min="1" />
+    <div class="card" style="border-color:rgba(127,255,212,0.3);background:rgba(127,255,212,0.04)">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:20px;font-family:'Instrument Serif',serif;font-style:italic;color:var(--accent)">π</span>
+        <div style="font-size:12px;line-height:1.8;color:var(--text)">
+          <strong>Convention: Digit 1 = 3</strong><br>
+          <span style="color:var(--muted)">3 · 1 4 1 5 9 2 6 5 3 5 8 9 7 9 ...<br>
+          ↑   ↑ ↑ ↑ ↑<br>
+          1   2 3 4 5 &nbsp;&nbsp;← digit numbers</span>
         </div>
-        <div class="field">
-          <label>Your Name / Handle</label>
-          <input type="text" id="contributorName" placeholder="e.g. arham_pi" maxlength="50" />
-        </div>
-      </div>
-      <div class="field" style="margin-bottom:12px;">
-        <label>Your π Digits</label>
-        <textarea id="submitDigits" placeholder="Paste your digits here (no spaces, no decimal point)&#10;e.g. 31415926535897932384... (digit 1 = 3)"></textarea>
-      </div>
-      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <button class="btn btn-primary" onclick="submitChunk()" id="submitBtn">Submit Chunk</button>
-        <span style="font-size:11px; color:var(--muted);" id="submitStatus"></span>
       </div>
     </div>
 
 ```
+<div class="card">
+  <div class="card-title">Submit Your Chunk</div>
+  <div class="submit-grid">
+    <div class="field">
+      <label>Start Digit</label>
+      <input type="number" id="submitStart" value="1" min="1" oninput="updateDigitPreview()" />
+    </div>
+    <div class="field">
+      <label>Your Name / Handle</label>
+      <input type="text" id="contributorName" placeholder="e.g. arham_pi" maxlength="50" />
+    </div>
+  </div>
+  <div class="field" style="margin-bottom:8px;">
+    <label>Your π Digits</label>
+    <textarea id="submitDigits" placeholder="Paste your digits here (no spaces, no decimal point)&#10;Starting from digit 1? Should begin with 3141592653..." oninput="updateDigitPreview()"></textarea>
+  </div>
+
+  <!-- Live preview -->
+  <div id="digitPreview" style="display:none;margin-bottom:12px;">
+    <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Preview — first 30 digits of your submission</div>
+    <div id="digitPreviewInner" style="font-size:13px;font-family:'Space Mono',monospace;line-height:2;word-break:break-all;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:2px;"></div>
+    <div id="conventionWarning" style="display:none;margin-top:6px;font-size:11px;padding:8px 12px;background:rgba(255,217,61,0.08);border:1px solid rgba(255,217,61,0.3);border-radius:2px;color:var(--pending);"></div>
+  </div>
+
+  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+    <button class="btn btn-primary" onclick="submitChunk()" id="submitBtn">Submit Chunk</button>
+    <span style="font-size:11px; color:var(--muted);" id="submitStatus"></span>
+  </div>
+</div>
+
 <div class="card" style="border-color: rgba(127,255,212,0.1);">
   <div class="card-title">How Verification Works</div>
   <div style="font-size:12px; line-height:1.9; color:var(--muted);">
@@ -633,7 +653,7 @@ footer {
       <tr>
         <th>Range</th>
         <th>Contributor</th>
-        <th>Submissions</th>
+        <th>Digits (first 10)</th>
         <th>Confidence</th>
         <th>Status</th>
       </tr>
@@ -947,6 +967,56 @@ footer {
     });
   }
 
+  // Known pi digits for convention checking
+  const PI_START = '31415926535897932384626433832795';
+
+  function updateDigitPreview() {
+    const digits = document.getElementById('submitDigits').value.trim().replace(/\s/g, '');
+    const start = parseInt(document.getElementById('submitStart').value) || 1;
+    const preview = document.getElementById('digitPreview');
+    const inner = document.getElementById('digitPreviewInner');
+    const warning = document.getElementById('conventionWarning');
+
+    if (!digits || digits.length < 3) { preview.style.display = 'none'; return; }
+    preview.style.display = 'block';
+    warning.style.display = 'none';
+
+    // Render first 30 digits with position numbers
+    const show = digits.slice(0, 30);
+    const colored = show.split('').map((d, i) => {
+      const pos = start + i;
+      const expected = PI_START[pos - 1];
+      const correct = expected ? d === expected : null;
+      const color = correct === null ? 'var(--text)' : correct ? 'var(--verified)' : 'var(--disputed)';
+      return `<span style="color:${color}" title="Digit ${pos}">${d}</span>`;
+    }).join('');
+    inner.innerHTML = colored + (digits.length > 30 ? '<span style="color:var(--muted)">…</span>' : '');
+
+    // Convention detection
+    if (start === 1) {
+      if (digits[0] === '1' && digits.slice(0,5) === '14159') {
+        warning.style.display = 'block';
+        warning.innerHTML = '⚠ Looks like you may have skipped the leading <strong style="color:var(--text)">3</strong>. In CrowdPi, digit 1 = 3. Did you mean to set start digit to <strong style="color:var(--text)">2</strong>? <button class="btn btn-secondary" style="padding:2px 8px;font-size:10px;margin-left:8px" onclick="document.getElementById(\'submitStart\').value=2;updateDigitPreview()">Fix it →</button>';
+      } else if (digits.slice(0,3) === '314' && digits[0] === '3') {
+        // correct, maybe show a green tick
+        warning.style.display = 'block';
+        warning.style.borderColor = 'rgba(127,255,212,0.3)';
+        warning.style.background = 'rgba(127,255,212,0.04)';
+        warning.style.color = 'var(--verified)';
+        warning.innerHTML = '✓ Digit 1 = 3 — convention looks correct!';
+      }
+    }
+
+    // Max length warning
+    if (digits.length > 100000) {
+      warning.style.display = 'block';
+      warning.style.borderColor = 'rgba(255,107,107,0.3)';
+      warning.style.background = 'rgba(255,107,107,0.04)';
+      warning.style.color = 'var(--disputed)';
+      warning.innerHTML = `⚠ Submission is ${digits.length.toLocaleString()} digits — max is 100,000. Please trim it down.`;
+    }
+  }
+
   // ── Tab switching ───────────────────────────────────────────────
   function switchTab(tab) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -995,6 +1065,15 @@ footer {
     if (!digits) { showToast('Please paste your digits', 'error'); return; }
     if (!/^\d+$/.test(digits)) { showToast('Digits should only contain numbers 0-9', 'error'); return; }
     if (isNaN(start) || start < 1) { showToast('Invalid start digit', 'error'); return; }
+    if (digits.length > 100000) { showToast('Max 100,000 digits per submission!', 'error'); return; }
+
+    // Auto-fix: if start=1 and digits begin with 14159 (missing leading 3), silently prepend it
+    if (start === 1 && digits.slice(0, 5) === '14159') {
+      digits = '3' + digits;
+      document.getElementById('submitDigits').value = digits;
+      showToast('Auto-fixed: prepended missing 3 at digit 1 ✓');
+      updateDigitPreview();
+    }
 
     const end = start + digits.length - 1;
     const chunkKey = start + '-' + end;
@@ -1154,11 +1233,18 @@ footer {
       const confColor = c.status === 'verified' ? 'var(--verified)' : c.status === 'disputed' ? 'var(--disputed)' : 'var(--pending)';
       const uniqueContribs = [...new Set(c.contributors)].slice(0, 3).join(', ') + (c.contributors.length > 3 ? '...' : '');
       const myTag = c.isMine ? ' <span style="color:var(--accent);font-size:9px;letter-spacing:1px">★ YOU</span>' : '';
+      // Show first 10 digits of the majority submission, highlighted if disputed
+      const majorityDigits = Object.entries(Object.fromEntries(
+        c.submissions.map(s => [s, (c.submissions.filter(x=>x===s).length)])
+      )).sort((a,b)=>b[1]-a[1])[0]?.[0]?.slice(0,10) || '—';
+      const digitDisplay = c.status === 'disputed'
+        ? `<span style="color:var(--disputed);font-size:11px;letter-spacing:1px">${majorityDigits}…</span>`
+        : `<span style="color:var(--muted);font-size:11px;letter-spacing:1px">${majorityDigits}…</span>`;
       return `
         <tr style="${c.isMine ? 'background:rgba(127,255,212,0.03)' : ''}">
           <td><span class="chunk-range">${c.start.toLocaleString()}–${c.end.toLocaleString()}</span>${myTag}</td>
-          <td style="color:var(--muted);font-size:11px">${uniqueContribs}</td>
-          <td style="color:var(--text)">${c.total}</td>
+          <td style="color:var(--muted);font-size:11px">${uniqueContribs} <span style="color:var(--border)">(${c.total})</span></td>
+          <td>${digitDisplay}</td>
           <td>
             <div class="confidence-bar">
               <div class="conf-track"><div class="conf-fill" style="width:${conf}%;background:${confColor}"></div></div>
