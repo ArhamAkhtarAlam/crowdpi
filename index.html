@@ -996,7 +996,10 @@ footer {
     if (start === 1) {
       if (digits[0] === '1' && digits.slice(0,5) === '14159') {
         warning.style.display = 'block';
-        warning.innerHTML = '⚠ Looks like you may have skipped the leading <strong style="color:var(--text)">3</strong>. In CrowdPi, digit 1 = 3. Did you mean to set start digit to <strong style="color:var(--text)">2</strong>? <button class="btn btn-secondary" style="padding:2px 8px;font-size:10px;margin-left:8px" onclick="document.getElementById(\'submitStart\').value=2;updateDigitPreview()">Fix it →</button>';
+        warning.style.borderColor = 'rgba(255,217,61,0.3)';
+        warning.style.background = 'rgba(255,217,61,0.04)';
+        warning.style.color = 'var(--pending)';
+        warning.innerHTML = '⚠ Looks like you skipped the leading <strong style="color:var(--text)">3</strong> — no worries, it\'ll be auto-added when you submit!';
       } else if (digits.slice(0,3) === '314' && digits[0] === '3') {
         // correct, maybe show a green tick
         warning.style.display = 'block';
@@ -1168,6 +1171,16 @@ footer {
   // ── Leaderboard ─────────────────────────────────────────────────
   let currentFilter = 'all';
 
+  // Extract the slice of `sub` that covers [targetStart, targetEnd]
+  function getOverlappingSlice(sub, targetStart, targetEnd) {
+    const overlapStart = Math.max(targetStart, sub.start_digit);
+    const overlapEnd   = Math.min(targetEnd,   sub.end_digit);
+    if (overlapStart > overlapEnd) return null; // no overlap
+    const from = overlapStart - sub.start_digit;
+    const to   = from + (overlapEnd - overlapStart + 1);
+    return sub.digits.slice(from, to);
+  }
+
   async function loadLeaderboard() {
     try {
       const data = await supabaseFetch('pi_submissions?select=start_digit,end_digit,digits,contributor,submitted_at&order=start_digit.asc&limit=500');
@@ -1179,6 +1192,9 @@ footer {
         return;
       }
 
+      const myChunks = getSubmittedChunks();
+
+      // Build unique chunk ranges (deduplicated by exact range first)
       const chunkMap = {};
       data.forEach(d => {
         const key = d.start_digit + '-' + d.end_digit;
@@ -1187,30 +1203,61 @@ footer {
         chunkMap[key].contributors.push(d.contributor);
       });
 
-      const myChunks = getSubmittedChunks();
-
       allChunks = Object.values(chunkMap).map(c => {
-        // overlap-aware: compare only the overlapping portion of each submission
-        // For leaderboard we still group by exact range for simplicity,
-        // but flag if any larger submission disagrees with this range
-        const counts = {};
-        c.submissions.forEach(s => counts[s] = (counts[s] || 0) + 1);
-        const maxAgree = Math.max(...Object.values(counts));
-        const total = c.submissions.length;
+        // Step 1: collect all "votes" for this range
+        // A vote = a slice of ANY submission (same or larger) that covers this range
+        const votes = []; // { slicedDigits, contributor, sourceRange }
 
-        // Also check cross-submissions: any submission in visualData that overlaps?
-        // (Only if visualData is loaded — otherwise fall back to exact match)
-        const crossCount = total; // placeholder, full cross-check happens in visual map
-        const status = total >= 3 && maxAgree === total ? 'verified'
-                     : total >= 2 && maxAgree < total ? 'disputed'
+        // Own exact submissions
+        c.submissions.forEach((digits, i) => {
+          votes.push({ digits, contributor: c.contributors[i], source: 'exact' });
+        });
+
+        // Cross-check: find other submissions that OVERLAP this range
+        data.forEach(other => {
+          // Skip submissions that are exactly this range (already counted above)
+          if (other.start_digit === c.start && other.end_digit === c.end) return;
+
+          const slice = getOverlappingSlice(other, c.start, c.end);
+          if (!slice) return;
+
+          // Only count it if it covers the FULL range of this chunk
+          const coversFullRange = other.start_digit <= c.start && other.end_digit >= c.end;
+          if (!coversFullRange) return;
+
+          votes.push({ digits: slice, contributor: other.contributor, source: `${other.start_digit}-${other.end_digit}` });
+        });
+
+        // Step 2: tally votes
+        const voteCounts = {};
+        votes.forEach(v => voteCounts[v.digits] = (voteCounts[v.digits] || 0) + 1);
+        const maxAgree = votes.length > 0 ? Math.max(...Object.values(voteCounts)) : 0;
+        const total = votes.length;
+        const allAgree = Object.keys(voteCounts).length === 1;
+
+        // Step 3: determine status
+        const status = total >= 3 && allAgree  ? 'verified'
+                     : total >= 2 && !allAgree ? 'disputed'
                      : 'pending';
+
+        const crossVotes = votes.filter(v => v.source !== 'exact');
         const isMine = myChunks.has(c.start + '-' + c.end);
-        return { ...c, maxAgree, total, status, isMine };
+
+        return {
+          ...c,
+          votes,
+          crossVotes,
+          maxAgree,
+          total,
+          status,
+          isMine
+        };
       });
 
       renderLeaderboard();
     } catch (e) {
       document.getElementById('leaderboardEmpty').innerHTML = '<div class="empty-pi">π</div><div>Error loading data</div>';
+      console.error(e);
     }
   }
 
@@ -1228,22 +1275,46 @@ footer {
     document.getElementById('leaderboardEmpty').style.display = 'none';
     document.getElementById('chunkTable').style.display = 'table';
 
-    tbody.innerHTML = filtered.map(c => {
+    tbody.innerHTML = filtered.map((c, i) => {
       const conf = Math.round((c.maxAgree / Math.max(c.total, 3)) * 100);
       const confColor = c.status === 'verified' ? 'var(--verified)' : c.status === 'disputed' ? 'var(--disputed)' : 'var(--pending)';
       const uniqueContribs = [...new Set(c.contributors)].slice(0, 3).join(', ') + (c.contributors.length > 3 ? '...' : '');
       const myTag = c.isMine ? ' <span style="color:var(--accent);font-size:9px;letter-spacing:1px">★ YOU</span>' : '';
-      // Show first 10 digits of the majority submission, highlighted if disputed
-      const majorityDigits = Object.entries(Object.fromEntries(
-        c.submissions.map(s => [s, (c.submissions.filter(x=>x===s).length)])
-      )).sort((a,b)=>b[1]-a[1])[0]?.[0]?.slice(0,10) || '—';
+
+      // Majority digits for preview — from votes
+      const voteCounts = {};
+      c.votes.forEach(v => voteCounts[v.digits] = (voteCounts[v.digits] || 0) + 1);
+      const majorityEntry = Object.entries(voteCounts).sort((a,b) => b[1]-a[1])[0];
+      const majorityDigits = majorityEntry?.[0] || '';
+      const preview10 = majorityDigits.slice(0, 10) || '—';
+      const crossCount = c.crossVotes?.length || 0;
+      const crossTag = crossCount > 0 ? ` <span style="color:var(--accent);font-size:9px">+${crossCount} cross</span>` : '';
+
       const digitDisplay = c.status === 'disputed'
-        ? `<span style="color:var(--disputed);font-size:11px;letter-spacing:1px">${majorityDigits}…</span>`
-        : `<span style="color:var(--muted);font-size:11px;letter-spacing:1px">${majorityDigits}…</span>`;
+        ? `<span style="color:var(--disputed);font-size:11px;letter-spacing:1px">${preview10}…</span>`
+        : `<span style="color:var(--muted);font-size:11px;letter-spacing:1px">${preview10}…</span>`;
+
+      // Build per-contributor expanded rows
+      const expandId = 'expand-' + i;
+      const uniqueSubs = Object.entries(subCounts).map(([digits, count]) => {
+        const contributor = c.contributors[c.submissions.indexOf(digits)] || '?';
+        const preview100 = digits.slice(0, 100);
+        const isFakeish = /^(.)\1{9,}/.test(digits); // 10+ repeated same digit
+        const fakeWarning = isFakeish ? ' <span style="color:var(--disputed);font-size:9px">⚠ POSSIBLY FAKE</span>' : '';
+        return `
+          <div style="margin-bottom:12px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:2px;">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+              <span>Submitted by <strong style="color:var(--text)">${contributor}</strong> · ${count} time${count>1?'s':''}${fakeWarning}</span>
+            </div>
+            <div style="font-size:12px;letter-spacing:1px;word-break:break-all;color:var(--accent);line-height:1.8">${preview100}${digits.length > 100 ? '<span style="color:var(--muted)">…</span>' : ''}</div>
+            ${digits.length > 100 ? `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 10px;font-size:10px" onclick="showFullDigitsModal('${c.start}','${c.end}',\`${digits.replace(/`/g,'')}\`)">See all ${digits.length.toLocaleString()} digits</button>` : ''}
+          </div>`;
+      }).join('');
+
       return `
-        <tr style="${c.isMine ? 'background:rgba(127,255,212,0.03)' : ''}">
+        <tr style="${c.isMine ? 'background:rgba(127,255,212,0.03)' : ''};cursor:pointer" onclick="toggleExpand('${expandId}', this)">
           <td><span class="chunk-range">${c.start.toLocaleString()}–${c.end.toLocaleString()}</span>${myTag}</td>
-          <td style="color:var(--muted);font-size:11px">${uniqueContribs} <span style="color:var(--border)">(${c.total})</span></td>
+          <td style="color:var(--muted);font-size:11px">${uniqueContribs} <span style="color:var(--border)">(${c.total})</span>${crossTag}</td>
           <td>${digitDisplay}</td>
           <td>
             <div class="confidence-bar">
@@ -1252,8 +1323,92 @@ footer {
             </div>
           </td>
           <td><span class="badge badge-${c.status}">${c.status}</span></td>
+        </tr>
+        <tr id="${expandId}" style="display:none">
+          <td colspan="5" style="padding:12px 12px 16px;background:rgba(0,0,0,0.2);">
+            <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">All submissions for digits ${c.start.toLocaleString()}–${c.end.toLocaleString()}</div>
+            ${expandSubs(c)}
+          </td>
         </tr>`;
     }).join('');
+  }
+
+  function expandSubs(c) {
+    // Group votes by digit content
+    const voteCounts = {};
+    c.votes.forEach(v => {
+      if (!voteCounts[v.digits]) voteCounts[v.digits] = { count: 0, contributors: [], sources: [] };
+      voteCounts[v.digits].count++;
+      voteCounts[v.digits].contributors.push(v.contributor);
+      voteCounts[v.digits].sources.push(v.source);
+    });
+
+    return Object.entries(voteCounts).map(([digits, info]) => {
+      const preview100 = digits.slice(0, 100);
+      const isFakeish = /^(.)\1{9,}/.test(digits);
+      const fakeWarning = isFakeish ? ' <span style="color:var(--disputed);font-size:9px">⚠ POSSIBLY FAKE</span>' : '';
+      const uniqueC = [...new Set(info.contributors)].join(', ');
+      const crossSources = info.sources.filter(s => s !== 'exact');
+      const crossNote = crossSources.length > 0
+        ? `<span style="color:var(--accent);font-size:9px;margin-left:6px">+ ${crossSources.length} cross-verified from larger chunk${crossSources.length > 1 ? 's' : ''}</span>`
+        : '';
+      return `
+        <div style="margin-bottom:10px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:2px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+            <span>By <strong style="color:var(--text)">${uniqueC}</strong> · ${info.count} vote${info.count>1?'s':''}${fakeWarning}${crossNote}</span>
+          </div>
+          <div style="font-size:12px;letter-spacing:1px;word-break:break-all;color:var(--accent);line-height:1.8">${preview100}${digits.length > 100 ? '<span style="color:var(--muted)">…</span>' : ''}</div>
+          ${digits.length > 100 ? `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 10px;font-size:10px" onclick="event.stopPropagation();showFullDigitsModal(${c.start},${c.end})">See all ${digits.length.toLocaleString()} digits</button>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  // Store full digits so modal can access them without inline template literals
+  const allDigitsStore = {};
+
+  function toggleExpand(id, row) {
+    const expandRow = document.getElementById(id);
+    const isOpen = expandRow.style.display !== 'none';
+    expandRow.style.display = isOpen ? 'none' : 'table-row';
+    row.style.background = (!isOpen && !row.style.background.includes('212')) ? 'rgba(127,255,212,0.05)' : '';
+  }
+
+  function showFullDigitsModal(start, end, digits) {
+    event.stopPropagation();
+    // Store digits for this chunk
+    const key = start + '-' + end;
+    // Build modal
+    let modal = document.getElementById('digitsModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'digitsModal';
+      modal.style.cssText = `
+        position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;
+        display:flex;align-items:center;justify-content:center;padding:24px;
+      `;
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+    }
+
+    // Find full digits from allChunks
+    const chunk = allChunks.find(c => c.start == start && c.end == end);
+    const fullDigits = chunk ? (chunk.submissions.find(s => s.slice(0,8) === String(digits).slice(0,8)) || chunk.submissions[0]) : String(digits);
+
+    modal.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:24px;max-width:700px;width:100%;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div>
+            <div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Full Submission</div>
+            <div style="font-size:14px;color:var(--accent);margin-top:4px">Digits ${Number(start).toLocaleString()}–${Number(end).toLocaleString()}</div>
+          </div>
+          <button class="btn btn-secondary" style="padding:4px 12px" onclick="document.getElementById('digitsModal').remove()">✕ Close</button>
+        </div>
+        <div style="font-size:12px;letter-spacing:1px;word-break:break-all;line-height:2;color:var(--text);background:var(--bg);padding:16px;border-radius:2px;border:1px solid var(--border);">${fullDigits}</div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button class="btn btn-secondary" style="font-size:11px;padding:6px 14px" onclick="navigator.clipboard.writeText('${fullDigits}');showToast('Copied!')">Copy digits</button>
+          <span style="font-size:11px;color:var(--muted);align-self:center">${fullDigits.length.toLocaleString()} digits total</span>
+        </div>
+      </div>`;
   }
 
   function filterChunks(filter, btn) {
