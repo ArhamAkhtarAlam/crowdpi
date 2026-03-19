@@ -1037,14 +1037,6 @@ footer {
       }
     }
 
-    // Max length warning
-    if (digits.length > 100000) {
-      warning.style.display = 'block';
-      warning.style.borderColor = 'rgba(255,107,107,0.3)';
-      warning.style.background = 'rgba(255,107,107,0.04)';
-      warning.style.color = 'var(--disputed)';
-      warning.innerHTML = `⚠ Submission is ${digits.length.toLocaleString()} digits — max is 100,000. Please trim it down.`;
-    }
   }
 
   // ── Browser Calculator ──────────────────────────────────────────
@@ -1149,8 +1141,6 @@ footer {
     if (!digits) { showToast('Please paste your digits', 'error'); return; }
     if (!/^\d+$/.test(digits)) { showToast('Digits should only contain numbers 0-9', 'error'); return; }
     if (isNaN(start) || start < 1) { showToast('Invalid start digit', 'error'); return; }
-    if (digits.length > 100000) { showToast('Max 100,000 digits per submission!', 'error'); return; }
-
     // Auto-fix: if start=1 and digits begin with 14159 (missing leading 3), silently prepend it
     if (start === 1 && digits.slice(0, 5) === '14159') {
       digits = '3' + digits;
