@@ -2,1554 +2,623 @@
 
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CrowdPi — Crowdsourced π Verification</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #0a0a0f;
-      --surface: #111118;
-      --border: #1e1e2e;
-      --accent: #7fffd4;
-      --accent2: #ff6b6b;
-      --accent3: #ffd93d;
-      --text: #e8e8f0;
-      --muted: #6b6b8a;
-      --verified: #7fffd4;
-      --disputed: #ff6b6b;
-      --pending: #ffd93d;
-    }
-
-```
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Space Mono', monospace;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* Animated background */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: 
-    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(127,255,212,0.04) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255,107,107,0.04) 0%, transparent 60%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.pi-bg {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.03;
-  font-size: 14px;
-  line-height: 1.6;
-  letter-spacing: 2px;
-  color: var(--accent);
-  word-break: break-all;
-  padding: 20px;
-  filter: blur(0.5px);
-}
-
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 24px;
-  position: relative;
-  z-index: 1;
-}
-
-/* Header */
-header {
-  padding: 48px 0 32px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 48px;
-}
-
-.logo {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.logo-pi {
-  font-family: 'Instrument Serif', serif;
-  font-style: italic;
-  font-size: 64px;
-  color: var(--accent);
-  line-height: 1;
-  text-shadow: 0 0 40px rgba(127,255,212,0.3);
-}
-
-.logo-text {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -1px;
-}
-
-.logo-text span { color: var(--accent); }
-
-.tagline {
-  color: var(--muted);
-  font-size: 12px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-.stats-bar {
-  display: flex;
-  gap: 32px;
-  margin-top: 24px;
-  flex-wrap: wrap;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.stat-label {
-  font-size: 10px;
-  color: var(--muted);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-/* Tabs */
-.tabs {
-  display: flex;
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 32px;
-}
-
-.tab {
-  flex: 1;
-  padding: 12px;
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  font-family: 'Space Mono', monospace;
-  font-size: 12px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-right: 1px solid var(--border);
-}
-
-.tab:last-child { border-right: none; }
-.tab:hover { color: var(--text); background: var(--surface); }
-.tab.active { background: var(--accent); color: var(--bg); font-weight: 700; }
-
-/* Compute Section */
-.section { display: none; }
-.section.active { display: block; }
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 24px;
-  margin-bottom: 16px;
-}
-
-.card-title {
-  font-size: 11px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 16px;
-}
-
-.compute-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 12px;
-  align-items: end;
-  margin-bottom: 16px;
-}
-
-.field { display: flex; flex-direction: column; gap: 6px; }
-
-label {
-  font-size: 10px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-input, textarea, select {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: 'Space Mono', monospace;
-  font-size: 13px;
-  padding: 10px 12px;
-  border-radius: 2px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-input:focus, textarea:focus { border-color: var(--accent); }
-
-textarea {
-  resize: vertical;
-  min-height: 120px;
-  line-height: 1.6;
-}
-
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 2px;
-  font-family: 'Space Mono', monospace;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: var(--bg);
-}
-
-.btn-primary:hover { background: #5fdbb5; }
-.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.btn-secondary {
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-}
-
-.btn-secondary:hover { background: rgba(127,255,212,0.08); }
-
-.digit-output {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  padding: 16px;
-  font-size: 13px;
-  line-height: 1.8;
-  word-break: break-all;
-  color: var(--accent);
-  min-height: 80px;
-  position: relative;
-}
-
-.digit-output.empty { color: var(--muted); font-style: italic; }
-
-.copy-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 4px 10px;
-  font-size: 10px;
-}
-
-/* Submit section */
-.submit-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.progress-bar {
-  height: 2px;
-  background: var(--border);
-  border-radius: 1px;
-  margin-top: 8px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--accent);
-  width: 0%;
-  transition: width 0.3s;
-}
-
-/* Leaderboard */
-.leaderboard-filters {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.filter-btn {
-  padding: 6px 14px;
-  font-size: 10px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  border-radius: 2px;
-  cursor: pointer;
-  font-family: 'Space Mono', monospace;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: all 0.2s;
-}
-
-.filter-btn.active, .filter-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.chunk-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.chunk-table th {
-  text-align: left;
-  padding: 8px 12px;
-  font-size: 10px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--muted);
-  border-bottom: 1px solid var(--border);
-}
-
-.chunk-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(30,30,46,0.5);
-  vertical-align: middle;
-}
-
-.chunk-table tr:hover td { background: rgba(127,255,212,0.02); }
-
-.confidence-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.conf-track {
-  flex: 1;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.conf-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.5s;
-}
-
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 2px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.badge-verified { background: rgba(127,255,212,0.15); color: var(--verified); }
-.badge-disputed { background: rgba(255,107,107,0.15); color: var(--disputed); }
-.badge-pending { background: rgba(255,217,61,0.15); color: var(--pending); }
-.badge-partial { background: rgba(127,255,212,0.08); color: #5fd4b0; border: 1px solid rgba(127,255,212,0.2); }
-
-.chunk-range {
-  font-family: 'Space Mono', monospace;
-  color: var(--accent);
-  font-size: 11px;
-}
-
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: var(--surface);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  padding: 12px 20px;
-  border-radius: 4px;
-  font-size: 12px;
-  z-index: 100;
-  transform: translateY(80px);
-  opacity: 0;
-  transition: all 0.3s;
-}
-
-.toast.error { border-color: var(--accent2); color: var(--accent2); }
-.toast.show { transform: translateY(0); opacity: 1; }
-
-/* Loading */
-.loading {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Python snippet */
-.code-block {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  padding: 16px;
-  font-size: 12px;
-  line-height: 1.8;
-  color: #a8b3cf;
-  overflow-x: auto;
-  position: relative;
-}
-
-.code-block .kw { color: #c792ea; }
-.code-block .fn { color: #82aaff; }
-.code-block .st { color: #c3e88d; }
-.code-block .cm { color: var(--muted); }
-.code-block .nm { color: var(--accent); }
-
-.empty-state {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--muted);
-}
-
-.empty-state .empty-pi {
-  font-family: 'Instrument Serif', serif;
-  font-style: italic;
-  font-size: 48px;
-  color: var(--border);
-  margin-bottom: 12px;
-}
-
-footer {
-  border-top: 1px solid var(--border);
-  padding: 24px 0;
-  margin-top: 64px;
-  color: var(--muted);
-  font-size: 11px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.legend-dot {
-  display: inline-block;
-  width: 10px; height: 10px;
-  border-radius: 1px;
-  margin-right: 4px;
-  vertical-align: middle;
-}
-
-@media (max-width: 600px) {
-  .compute-controls { grid-template-columns: 1fr; }
-  .submit-grid { grid-template-columns: 1fr; }
-  .logo-pi { font-size: 48px; }
-  .chunk-table th:nth-child(3),
-  .chunk-table td:nth-child(3) { display: none; }
-}
-```
-
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CrowdPi — Crowdsourced π Verification</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#0a0a0f;--surface:#111118;--border:#1e1e2e;--accent:#7fffd4;--accent2:#ff6b6b;--accent3:#ffd93d;--text:#e8e8f0;--muted:#6b6b8a;--verified:#7fffd4;--disputed:#ff6b6b;--pending:#ffd93d;--partial:#5fd4b0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 20%,rgba(127,255,212,.04) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(255,107,107,.04) 0%,transparent 60%);pointer-events:none;z-index:0}
+.pi-bg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;opacity:.03;font-size:14px;line-height:1.6;letter-spacing:2px;color:var(--accent);word-break:break-all;padding:20px;filter:blur(.5px)}
+.container{max-width:920px;margin:0 auto;padding:0 20px;position:relative;z-index:1}
+header{padding:40px 0 28px;border-bottom:1px solid var(--border);margin-bottom:36px}
+.logo{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.logo-pi{font-family:'Instrument Serif',serif;font-style:italic;font-size:60px;color:var(--accent);line-height:1;text-shadow:0 0 40px rgba(127,255,212,.3)}
+.logo-text{font-size:26px;font-weight:700;letter-spacing:-1px}
+.logo-text span{color:var(--accent)}
+.tagline{color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase}
+.stats-bar{display:flex;gap:28px;margin-top:20px;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat-value{font-size:22px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.tabs{display:flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:28px;flex-wrap:wrap}
+.tab{flex:1;min-width:80px;padding:10px 8px;background:transparent;border:none;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;border-right:1px solid var(--border)}
+.tab:last-child{border-right:none}
+.tab:hover{color:var(--text);background:var(--surface)}
+.tab.active{background:var(--accent);color:var(--bg);font-weight:700}
+.section{display:none}
+.section.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:14px}
+.card-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:5px}
+label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+input,textarea,select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:9px 11px;border-radius:2px;outline:none;transition:border-color .2s;width:100%}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:110px;line-height:1.6}
+.btn{padding:9px 18px;border:none;border-radius:2px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--accent);color:var(--bg)}
+.btn-primary:hover{background:#5fdbb5}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn-secondary:hover{background:rgba(127,255,212,.08)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.progress-bar{height:2px;background:var(--border);border-radius:1px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);width:0%;transition:width .3s}
+.badge{display:inline-block;padding:2px 7px;border-radius:2px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.badge-verified{background:rgba(127,255,212,.15);color:var(--verified)}
+.badge-disputed{background:rgba(255,107,107,.15);color:var(--disputed)}
+.badge-pending{background:rgba(255,217,61,.15);color:var(--pending)}
+.badge-partial{background:rgba(127,255,212,.08);color:var(--partial);border:1px solid rgba(127,255,212,.2)}
+.badge-wrong{background:rgba(255,107,107,.15);color:var(--disputed)}
+.chunk-table{width:100%;border-collapse:collapse;font-size:12px}
+.chunk-table th{text-align:left;padding:7px 10px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
+.chunk-table td{padding:9px 10px;border-bottom:1px solid rgba(30,30,46,.5);vertical-align:middle}
+.chunk-table tr:hover td{background:rgba(127,255,212,.02)}
+.chunk-range{font-family:'Space Mono',monospace;color:var(--accent);font-size:11px}
+.conf-bar{display:flex;align-items:center;gap:6px}
+.conf-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.conf-fill{height:100%;border-radius:2px;transition:width .5s}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.filter-btn{padding:5px 12px;font-size:10px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:2px;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:1px;text-transform:uppercase;transition:all .2s}
+.filter-btn.active,.filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--accent);color:var(--accent);padding:10px 18px;border-radius:4px;font-size:11px;z-index:200;transform:translateY(80px);opacity:0;transition:all .3s;max-width:340px}
+.toast.error{border-color:var(--accent2);color:var(--accent2)}
+.toast.show{transform:translateY(0);opacity:1}
+.loading{display:inline-block;width:11px;height:11px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:7px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.code-block{background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:14px;font-size:12px;line-height:1.8;color:#a8b3cf;overflow-x:auto}
+.code-block .kw{color:#c792ea}.code-block .fn{color:#82aaff}.code-block .st{color:#c3e88d}.code-block .cm{color:var(--muted)}.code-block .nm{color:var(--accent)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-pi{font-family:'Instrument Serif',serif;font-style:italic;font-size:44px;color:var(--border);margin-bottom:10px}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:1px;margin-right:4px;vertical-align:middle}
+.tier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.tier-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px;cursor:pointer;transition:all .2s}
+.tier-card:hover,.tier-card.active{border-color:var(--accent);background:rgba(127,255,212,.04)}
+.tier-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:8px}
+.tier-bar-fill{height:100%;border-radius:2px;transition:width .6s}
+footer{border-top:1px solid var(--border);padding:20px 0;margin-top:48px;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}.chunk-table th:nth-child(3),.chunk-table td:nth-child(3){display:none}.logo-pi{font-size:44px}}
+</style>
 </head>
 <body>
-
 <div class="pi-bg" id="piBg"></div>
-
 <div class="container">
-  <header>
-    <div class="logo">
-      <span class="logo-pi">π</span>
-      <span class="logo-text">Crowd<span>Pi</span></span>
-    </div>
-    <div class="tagline">Crowdsourced verification of π's digits — one chunk at a time</div>
-    <div class="stats-bar">
-      <div class="stat">
-        <span class="stat-value" id="totalChunks">—</span>
-        <span class="stat-label">Chunks Submitted</span>
-      </div>
-      <div class="stat">
-        <span class="stat-value" id="verifiedChunks">—</span>
-        <span class="stat-label">Verified Chunks</span>
-      </div>
-      <div class="stat">
-        <span class="stat-value" id="totalContributors">—</span>
-        <span class="stat-label">Contributors</span>
-      </div>
-      <div class="stat">
-        <span class="stat-value" id="totalDigits">—</span>
-        <span class="stat-label">Digits Covered</span>
-      </div>
-    </div>
-  </header>
 
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('compute')">① How To Compute</button>
-    <button class="tab" onclick="switchTab('submit')">② Submit</button>
-    <button class="tab" onclick="switchTab('leaderboard')">③ Leaderboard</button>
-    <button class="tab" onclick="switchTab('visual')">④ Visual Map</button>
-    <button class="tab" onclick="switchTab('howto')">How It Works</button>
+<header>
+  <div class="logo"><span class="logo-pi">π</span><span class="logo-text">Crowd<span>Pi</span></span></div>
+  <div class="tagline">Crowdsourced verification of π's digits — one chunk at a time</div>
+  <div class="stats-bar">
+    <div class="stat"><span class="stat-value" id="statChunks">—</span><span class="stat-label">Chunks Submitted</span></div>
+    <div class="stat"><span class="stat-value" id="statVerified">—</span><span class="stat-label">Verified</span></div>
+    <div class="stat"><span class="stat-value" id="statContribs">—</span><span class="stat-label">Contributors</span></div>
+    <div class="stat"><span class="stat-value" id="statDigits">—</span><span class="stat-label">Digits Covered</span></div>
   </div>
+</header>
 
-  <!-- COMPUTE TAB -->
-
-  <div class="section active" id="tab-compute">
-
-```
-<div class="card">
-  <div class="card-title">Browser Calculator</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-bottom:16px;" class="compute-controls">
-    <div class="field">
-      <label>Start Digit</label>
-      <input type="number" id="calcStart" value="1" min="1" />
-    </div>
-    <div class="field">
-      <label>Chunk Size</label>
-      <select id="calcSize">
-        <option value="100">100 digits</option>
-        <option value="500">500 digits</option>
-        <option value="1000" selected>1,000 digits</option>
-        <option value="2000">2,000 digits</option>
-      </select>
-    </div>
-    <button class="btn btn-primary" onclick="computeInBrowser()" id="calcBtn">Compute</button>
-  </div>
-  <div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" id="calcProgress"></div></div>
-  <div id="calcOutput" style="display:none">
-    <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Result</div>
-    <div id="calcDigits" style="font-size:12px;letter-spacing:1px;word-break:break-all;line-height:1.8;color:var(--accent);background:var(--bg);border:1px solid var(--border);padding:12px;border-radius:2px;max-height:120px;overflow-y:auto;"></div>
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="sendCalcToSubmit()" id="calcSendBtn">→ Send to Submit</button>
-      <button class="btn btn-secondary" onclick="copyCalcDigits()">Copy</button>
-      <span id="calcMeta" style="font-size:11px;color:var(--muted);align-self:center;"></span>
-    </div>
-  </div>
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('compute',this)">① Compute</button>
+  <button class="tab" onclick="switchTab('submit',this)">② Submit</button>
+  <button class="tab" onclick="switchTab('leaderboard',this)">③ Leaderboard</button>
+  <button class="tab" onclick="switchTab('visual',this)">④ Visual Map</button>
+  <button class="tab" onclick="switchTab('howto',this)">How It Works</button>
 </div>
 
-<div class="card">
-  <div class="card-title">Or Use Python (For Larger Chunks)</div>
-  <div class="code-block">
-    <span class="kw">from</span> mpmath <span class="kw">import</span> mp, pi<br><br>
-    <span class="kw">def</span> <span class="fn">get_pi_chunk</span>(start, length):<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># digit 1 = 3, digit 2 = 1, digit 3 = 4 ...</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;mp.dps = start + length + <span class="nm">10</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;pi_str = mp.<span class="fn">nstr</span>(pi, start + length, strip_zeros=<span class="nm">False</span>)<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;pi_str = pi_str.replace(<span class="st">'.'</span>, <span class="st">''</span>)<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> pi_str[start - <span class="nm">1</span> : start - <span class="nm">1</span> + length]<br><br>
-    start = <span class="nm">1</span> &nbsp;&nbsp;&nbsp;<span class="cm"># start digit (1 = the leading "3")</span><br>
-    length = <span class="nm">1000</span> <span class="cm"># how many digits</span><br><br>
-    chunk = <span class="fn">get_pi_chunk</span>(start, length)<br>
-    <span class="fn">print</span>(chunk)<br>
-    <span class="cm"># output starts with: 31415926535897932384...</span>
-  </div>
-</div>
+<!-- COMPUTE -->
 
-<div class="card">
-  <div class="card-title">Step 3 — Submit Your Digits</div>
-  <div style="font-size:12px; line-height:2; color:var(--muted);">
-    Use the browser calculator above and hit <strong style="color:var(--text)">→ Send to Submit</strong>, or copy your Python output and paste it in the <span style="color:var(--accent); cursor:pointer;" onclick="document.querySelectorAll('.tab')[1].click()">② Submit</span> tab.
-  </div>
-</div>
-```
-
-  </div>
-
-  <!-- SUBMIT TAB -->
-
-  <div class="section" id="tab-submit">
-    <div class="card" style="border-color:rgba(127,255,212,0.3);background:rgba(127,255,212,0.04)">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span style="font-size:20px;font-family:'Instrument Serif',serif;font-style:italic;color:var(--accent)">π</span>
-        <div style="font-size:12px;line-height:1.8;color:var(--text)">
-          <strong>Convention: Digit 1 = 3</strong><br>
-          <span style="color:var(--muted)">3 · 1 4 1 5 9 2 6 5 3 5 8 9 7 9 ...<br>
-          ↑   ↑ ↑ ↑ ↑<br>
-          1   2 3 4 5 &nbsp;&nbsp;← digit numbers</span>
-        </div>
+<div class="section active" id="tab-compute">
+  <div class="card">
+    <div class="card-title">Browser Calculator</div>
+    <div class="grid2" style="margin-bottom:12px;align-items:end">
+      <div class="field"><label>Start Digit (1 = the "3")</label><input type="number" id="calcStart" value="1" min="1"/></div>
+      <div class="field"><label>Chunk Size</label>
+        <select id="calcSize"><option value="100">100</option><option value="500">500</option><option value="1000" selected>1,000</option><option value="2000">2,000</option></select>
       </div>
     </div>
-
-```
-<div class="card">
-  <div class="card-title">Submit Your Chunk</div>
-  <div class="submit-grid">
-    <div class="field">
-      <label>Start Digit</label>
-      <input type="number" id="submitStart" value="1" min="1" oninput="updateDigitPreview()" />
-    </div>
-    <div class="field">
-      <label>Your Name / Handle</label>
-      <input type="text" id="contributorName" placeholder="e.g. arham_pi" maxlength="50" />
-    </div>
-  </div>
-  <div class="field" style="margin-bottom:8px;">
-    <label>Your π Digits</label>
-    <textarea id="submitDigits" placeholder="Paste your digits here (no spaces, no decimal point)&#10;Starting from digit 1? Should begin with 3141592653..." oninput="updateDigitPreview()"></textarea>
-  </div>
-
-  <!-- Live preview -->
-  <div id="digitPreview" style="display:none;margin-bottom:12px;">
-    <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Preview — first 30 digits of your submission</div>
-    <div id="digitPreviewInner" style="font-size:13px;font-family:'Space Mono',monospace;line-height:2;word-break:break-all;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:2px;"></div>
-    <div id="conventionWarning" style="display:none;margin-top:6px;font-size:11px;padding:8px 12px;background:rgba(255,217,61,0.08);border:1px solid rgba(255,217,61,0.3);border-radius:2px;color:var(--pending);"></div>
-  </div>
-
-  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-    <button class="btn btn-primary" onclick="submitChunk()" id="submitBtn">Submit Chunk</button>
-    <span style="font-size:11px; color:var(--muted);" id="submitStatus"></span>
-  </div>
-</div>
-
-<div class="card" style="border-color: rgba(127,255,212,0.1);">
-  <div class="card-title">How Verification Works</div>
-  <div style="font-size:12px; line-height:1.9; color:var(--muted);">
-    Your submission is compared against other independent submissions of the same chunk range.<br><br>
-    <span style="color:var(--verified);">■</span> <strong style="color:var(--text);">Verified</strong> — 3+ independent submissions agree<br>
-    <span style="color:var(--pending);">■</span> <strong style="color:var(--text);">Pending</strong> — Fewer than 3 submissions, awaiting consensus<br>
-    <span style="color:var(--disputed);">■</span> <strong style="color:var(--text);">Disputed</strong> — Submissions disagree — more needed to resolve
-  </div>
-</div>
-
-<div class="card" id="mySubmissionsCard" style="display:none">
-  <div class="card-title">Your Submissions This Session</div>
-  <table class="chunk-table" id="mySubmissionsTable">
-    <thead>
-      <tr>
-        <th>Range</th>
-        <th>Length</th>
-        <th>Submitted</th>
-      </tr>
-    </thead>
-    <tbody id="mySubmissionsBody"></tbody>
-  </table>
-</div>
-```
-
-  </div>
-
-  <!-- LEADERBOARD TAB -->
-
-  <div class="section" id="tab-leaderboard">
-    <div class="leaderboard-filters">
-      <button class="filter-btn active" onclick="filterChunks('all', this)">All</button>
-      <button class="filter-btn" onclick="filterChunks('verified', this)">Verified</button>
-      <button class="filter-btn" onclick="filterChunks('partial', this)">Partial</button>
-      <button class="filter-btn" onclick="filterChunks('pending', this)">Pending</button>
-      <button class="filter-btn" onclick="filterChunks('disputed', this)">Disputed</button>
-    </div>
-
-```
-<div class="card" id="leaderboardCard">
-  <div class="empty-state" id="leaderboardEmpty">
-    <div class="empty-pi">π</div>
-    <div>Loading chunks...</div>
-  </div>
-  <table class="chunk-table" id="chunkTable" style="display:none">
-    <thead>
-      <tr>
-        <th>Range</th>
-        <th>Contributor</th>
-        <th>Digits (first 10)</th>
-        <th>Confidence</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="chunkTableBody"></tbody>
-  </table>
-</div>
-```
-
-  </div>
-
-  <!-- VISUAL MAP TAB -->
-
-  <div class="section" id="tab-visual">
-    <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span>Digit Coverage Map</span>
-        <div style="display:flex;gap:12px;font-size:10px;letter-spacing:1px;flex-wrap:wrap;">
-          <span><span class="legend-dot" style="background:var(--verified)"></span>VERIFIED</span>
-          <span><span class="legend-dot" style="background:var(--pending)"></span>PENDING</span>
-          <span><span class="legend-dot" style="background:var(--disputed)"></span>DISPUTED</span>
-          <span><span class="legend-dot" style="background:#222233"></span>UNCOVERED</span>
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">Each cell = 100 digits. Click for details.</div>
-      <div id="visualMap" style="display:flex;flex-wrap:wrap;gap:3px;min-height:40px;"></div>
-      <div id="visualEmpty" class="empty-state" style="display:none">
-        <div class="empty-pi">π</div>
-        <div>No submissions yet — be the first!</div>
+    <button class="btn btn-primary" onclick="computeInBrowser()" id="calcBtn" style="margin-bottom:10px">Compute</button>
+    <div class="progress-bar" style="margin-bottom:10px"><div class="progress-fill" id="calcProgress"></div></div>
+    <div id="calcOutput" style="display:none">
+      <div style="font-size:11px;letter-spacing:1px;word-break:break-all;color:var(--accent);background:var(--bg);border:1px solid var(--border);padding:12px;border-radius:2px;max-height:100px;overflow-y:auto;line-height:1.8;margin-bottom:10px" id="calcDigits"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" onclick="sendCalcToSubmit()">→ Send to Submit</button>
+        <button class="btn btn-secondary" onclick="navigator.clipboard.writeText(calcResult.digits);showToast('Copied!')">Copy</button>
+        <span id="calcMeta" style="font-size:10px;color:var(--muted)"></span>
       </div>
     </div>
-
-```
-<div class="card" id="mapDetailCard" style="display:none;border-color:rgba(127,255,212,0.2)">
-  <div class="card-title">Range Detail</div>
-  <div id="mapDetailContent" style="font-size:12px;line-height:2;color:var(--muted);"></div>
-</div>
-
-<div class="card">
-  <div class="card-title">Submission Timeline</div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Chunks submitted over time</div>
-  <div id="timelineChart" style="height:72px;display:flex;align-items:flex-end;gap:2px;"></div>
-  <div id="timelineEmpty" style="font-size:11px;color:var(--muted);display:none">No data yet</div>
-</div>
-```
-
   </div>
+  <div class="card">
+    <div class="card-title">Python Script (for large chunks)</div>
+    <div class="code-block">
+      <span class="kw">from</span> mpmath <span class="kw">import</span> mp, pi<br><br>
+      <span class="kw">def</span> <span class="fn">get_pi_chunk</span>(start, length):<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># digit 1 = 3, digit 2 = 1, digit 3 = 4 ...</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;mp.dps = start + length + <span class="nm">10</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;pi_str = mp.<span class="fn">nstr</span>(pi, start + length, strip_zeros=<span class="nm">False</span>)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;pi_str = pi_str.replace(<span class="st">'.'</span>, <span class="st">''</span>)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> pi_str[start-<span class="nm">1</span> : start-<span class="nm">1</span>+length]<br><br>
+      start = <span class="nm">1</span><br>length = <span class="nm">2000000</span><br>
+      chunk = <span class="fn">get_pi_chunk</span>(start, length)<br>
+      <span class="kw">with</span> <span class="fn">open</span>(<span class="st">'pi_chunk.txt'</span>,<span class="st">'w'</span>) <span class="kw">as</span> f: f.<span class="fn">write</span>(chunk)<br>
+      <span class="fn">print</span>(<span class="st">'done!'</span>)<span class="cm">  # starts with: 31415926535897...</span>
+    </div>
+  </div>
+</div>
 
-  <!-- HOW IT WORKS TAB -->
+<!-- SUBMIT -->
 
-  <div class="section" id="tab-howto">
-    <div class="card">
-      <div class="card-title">The Idea</div>
-      <div style="font-size:13px; line-height:2; color:var(--muted);">
-        π has been computed to <span style="color:var(--text)">314 trillion digits</span> — but what if the community could extend and independently verify those digits together?<br><br>
-        CrowdPi is a platform where anyone can compute a chunk of π's digits, submit it, and have it verified by consensus — no central supercomputer needed.<br><br>
-        When multiple people independently compute the <span style="color:var(--accent)">same chunk</span> and agree, it's verified. Disagreements get flagged, and more submissions resolve them. The truth emerges from the crowd.
-      </div>
+<div class="section" id="tab-submit">
+  <div class="card" style="border-color:rgba(127,255,212,.3);background:rgba(127,255,212,.04)">
+    <div style="font-size:12px;line-height:1.9;color:var(--text)"><strong>Convention: Digit 1 = 3</strong><br>
+    <span style="color:var(--muted);font-size:11px">3 · 1 4 1 5 9 2 6 5 ...<br>↑ &nbsp;↑ ↑ ↑ ↑ ↑<br>1 &nbsp;2 3 4 5 6 &nbsp;← digit numbers</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Submit Your Chunk</div>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="field"><label>Start Digit</label><input type="number" id="subStart" value="1" min="1" oninput="updatePreview()"/></div>
+      <div class="field"><label>Your Name / Handle</label><input type="text" id="subName" placeholder="e.g. arham_pi" maxlength="50"/></div>
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <label>Your π Digits</label>
+      <textarea id="subDigits" placeholder="Paste yo digits here (no spaces, no decimal point)&#10;From digit 1? Should begin with 314159..." oninput="updatePreview()"></textarea>
+    </div>
+    <div id="gtNotice" style="display:none;margin-bottom:10px;font-size:11px;padding:8px 12px;border-radius:2px"></div>
+    <div id="previewBox" style="display:none;margin-bottom:10px">
+      <div style="font-size:10px;letter-spacing:1px;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Preview — first 30 digits</div>
+      <div id="previewInner" style="font-size:13px;word-break:break-all;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:2px;line-height:1.8"></div>
+      <div id="conventionWarn" style="display:none;margin-top:6px;font-size:11px;padding:7px 12px;border-radius:2px"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="submitChunk()" id="subBtn">Submit Chunk</button>
+      <span id="subStatus" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+  </div>
+  <div class="card" style="border-color:rgba(127,255,212,.1)">
+    <div class="card-title">How Verification Works</div>
+    <div style="font-size:12px;line-height:1.9;color:var(--muted)">
+      <span style="color:var(--verified)">■</span> <strong style="color:var(--text)">Verified</strong> — 3+ independent contributors agree<br>
+      <span style="color:var(--pending)">■</span> <strong style="color:var(--text)">Pending</strong> — fewer than 3 independent submissions<br>
+      <span style="color:var(--partial)">■</span> <strong style="color:var(--text)">Partial</strong> — portion cross-checked by overlapping chunks<br>
+      <span style="color:var(--disputed)">■</span> <strong style="color:var(--text)">Disputed</strong> — submissions disagree
+    </div>
+  </div>
+  <div class="card" id="mySubsCard" style="display:none">
+    <div class="card-title">Your Submissions This Session</div>
+    <table class="chunk-table"><thead><tr><th>Range</th><th>Length</th><th>Time</th></tr></thead><tbody id="mySubsBody"></tbody></table>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+
+<div class="section" id="tab-leaderboard">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Click a tier to explore</div>
+    <button class="btn btn-secondary" style="font-size:10px;padding:5px 12px;border-color:rgba(255,217,61,.4);color:var(--pending)" onclick="adminVerify()">🔐 Ground Truth Check</button>
+  </div>
+  <div class="tier-grid" id="tierGrid"><div class="empty-state"><div class="loading"></div></div></div>
+  <div id="tierDetail" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div><span id="tierDetailTitle" style="font-size:14px;color:var(--accent);font-weight:700"></span><span id="tierDetailMeta" style="font-size:11px;color:var(--muted);margin-left:10px"></span></div>
+      <button class="btn btn-secondary" style="font-size:10px;padding:4px 12px" onclick="closeTierDetail()">✕ Close</button>
+    </div>
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="filterChunks('all',this)">All</button>
+      <button class="filter-btn" onclick="filterChunks('verified',this)">Verified</button>
+      <button class="filter-btn" onclick="filterChunks('partial',this)">Partial</button>
+      <button class="filter-btn" onclick="filterChunks('pending',this)">Pending</button>
+      <button class="filter-btn" onclick="filterChunks('disputed',this)">Disputed</button>
+      <button class="filter-btn" onclick="filterChunks('wrong',this)" style="border-color:rgba(255,107,107,.4);color:var(--disputed)">⚠ Wrong</button>
     </div>
     <div class="card">
-      <div class="card-title">Why This Matters</div>
-      <div style="font-size:13px; line-height:2; color:var(--muted);">
-        π is believed to be a <span style="color:var(--text)">normal number</span> — meaning every sequence of digits appears with equal frequency. But this has never been formally proven.<br><br>
-        A large enough crowdsourced dataset could help mathematicians study the distribution of π's digits statistically — real citizen science, not just a fun project.<br><br>
-        <span style="color:var(--accent)">Your chunk might matter.</span>
-      </div>
+      <div class="empty-state" id="lbEmpty"><div class="empty-pi">π</div><div>Loading...</div></div>
+      <table class="chunk-table" id="lbTable" style="display:none">
+        <thead><tr><th>Range</th><th>Contributor</th><th>First 10</th><th>Confidence</th><th>Status</th></tr></thead>
+        <tbody id="lbBody"></tbody>
+      </table>
     </div>
   </div>
+</div>
 
-  <footer>
-    <span>CrowdPi — Built on Pi Day, March 14 2026</span>
-    <span style="color:var(--accent);">3.14159265358979...</span>
-  </footer>
+<!-- VISUAL MAP -->
+
+<div class="section" id="tab-visual">
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span>Digit Coverage Map</span>
+      <div style="display:flex;gap:10px;font-size:10px;flex-wrap:wrap">
+        <span><span class="legend-dot" style="background:var(--verified)"></span>VERIFIED</span>
+        <span><span class="legend-dot" style="background:var(--pending)"></span>PENDING</span>
+        <span><span class="legend-dot" style="background:var(--disputed)"></span>DISPUTED</span>
+        <span><span class="legend-dot" style="background:#222233"></span>UNCOVERED</span>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">Each cell = 100 digits. Click for details.</div>
+    <div id="visualMap" style="display:flex;flex-wrap:wrap;gap:3px;min-height:40px"></div>
+    <div id="visualEmpty" class="empty-state" style="display:none"><div class="empty-pi">π</div><div>No submissions yet</div></div>
+  </div>
+  <div class="card" id="mapDetailCard" style="display:none;border-color:rgba(127,255,212,.2)">
+    <div class="card-title">Range Detail</div>
+    <div id="mapDetailContent" style="font-size:12px;line-height:2;color:var(--muted)"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Submission Timeline</div>
+    <div id="timelineChart" style="height:68px;display:flex;align-items:flex-end;gap:2px"></div>
+    <div id="timelineEmpty" style="font-size:11px;color:var(--muted);display:none">No data yet</div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+
+<div class="section" id="tab-howto">
+  <div class="card">
+    <div class="card-title">The Idea</div>
+    <div style="font-size:13px;line-height:2;color:var(--muted)">π has been computed to <span style="color:var(--text)">314 trillion digits</span> — but what if the community could independently verify those digits together?<br><br>Anyone can compute a chunk, submit it, and have it verified by consensus. When multiple independent people agree, it's verified. The truth emerges from the crowd.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Why This Matters</div>
+    <div style="font-size:13px;line-height:2;color:var(--muted)">π is believed to be a <span style="color:var(--text)">normal number</span> — every digit sequence appears with equal frequency. This has never been formally proven.<br><br>A large crowdsourced dataset could help study π's digit distribution statistically. <span style="color:var(--accent)">Your chunk might matter.</span></div>
+  </div>
+</div>
+
+<footer>
+  <span>CrowdPi — Built on Pi Day, March 14 2026</span>
+  <span style="color:var(--accent)">3.14159265358979...</span>
+</footer>
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeModal()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:22px;max-width:680px;width:100%;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div id="modalTitle" style="font-size:13px;color:var(--accent);font-weight:700"></div>
+      <button class="btn btn-secondary" style="padding:3px 10px;font-size:10px" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
 
 <script>
-  const SUPABASE_URL = 'https://yeypiaexdkuzflshxtrb.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlleXBpYWV4ZGt1emZsc2h4dHJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NzMxMTIsImV4cCI6MjA4OTA0OTExMn0.tA--ibeAYTQ-bKWCcZyy1xRDDySikWY9v-2wQdbAeG0';
+const SB_URL='https://yeypiaexdkuzflshxtrb.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlleXBpYWV4ZGt1emZsc2h4dHJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NzMxMTIsImV4cCI6MjA4OTA0OTExMn0.tA--ibeAYTQ-bKWCcZyy1xRDDySikWY9v-2wQdbAeG0';
+const PI='31415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938446095505822317253594081284811174502841027019385211055596446229489549303819644288109756659334461284756482337867831652712019091456485669234603486104543266482133936072602491412737245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094330572703657595919530921861173819326117931051185480744623799627495673518857527248912279381830119491298336733624406566430860213949463952247371907021798609437027705392171762931767523846748184676694051320005681271452635608277857713427577896091736371787214684409012249534301465495853710507922796892589235420199561121290219608640344181598136297747713099605187072113499999983729780499510597317328160963185950244594553469083026425223082533446850352619311881710100031378387528865875332083814206171776691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989380952572010654858632788659361533818279682303019520353018529689957736225994138912497217752834791315155748572424541506959508295331168617278558890750983817546374649393192550604009277016711390098488240128583616035637076601047101819429555961989467678374494482553797747268471040475346462080466842590694912933136770289891521047521620569660240580381501935112533824300355876402474964732639141992726042699227967823547816360093417216412199245863150302861829745557067498385054945885869269956909272107975093029553211653449872027559602364806654991198818347977535663698074265425278625518184175746728909777727938000816470600161452491921732172147723501414419735685481613611573525521334757418494684385233239073941433345477624168625189835694855620992192221842725502542568876717904946016534668049886272327917860857843838279679766814541009538837863609506800642251252051173929848960841284886269456042419652850222106611863067442786220391949450471237137869609563643719172874677646575739624138908658326459958133904780275900994657640789512694683983525957098258226205224894077267194782684826014769909026401363944374553050682034962524517493996514314298091906592509372216964615157098583874105978859597729754989301617539284681382686838689427741559918559252459539594310499725246808459872736446958486538367362226260991246080512438843904512441365497627807977156914359977001296160894416948685558484063534220722258284886481584560285060168427394522674676788952521385225499546667278239864565961163548862305774564980355936345681743241125150760694794510965960940252288797108931456691368672287489405601015033086179286809208747609178249385890097149096759852613655497818931297848216829989487226588048575640142704775551323796414515237462343645428584447952658678210511413547357395231134271661021359695362314429524849371871101457654035902799344037420073105785390621983874478084784896833214457138687519435064302184531910484810053706146806749192781911979399520614196634287544406437451237181921799983910159195618146751426912397489409071864942319615679452080951465502252316038819301420937621378559566389377870830390697920773467221825625996615014215030680384477345492026054146659252014974428507325186660021324340881907104863317346496514539057962685610055081066587969981635747363840525714591028970641401109712062804390397595156771577004203378699360072305587631763594218731251471205329281918261861258673215791984148488291644706095752706957220917567116722910981690915280173506712748583222871835209353965725121083579151369882091444210067510334671103141267111369908658516398315019701651511685171437657618351556508849099898599823873455283316355076479185358932261854896321329330898570642046752590709154814165498594616371802709819943099244889575712828905923233260972997120844335732654893823911932597463667305836041428138830320382490375898524374417029132765618093773444030707469211201913020330380197621101100449293215160842444859637669838952286847831235526582131449576857262433441893039686426243410773226978028073189154411010446823252716201052652272111660396665573092547110557853763466820653109896526918620564769312570586356620185581007293606598764861179104533488503461136576867532494416680396265797877185560845529654126654085306143444318586769751456614068007002378776591344017127494704205622305389945613140711270004078547332699390814546646458807972708266830634328587856983052358089330657574067954571637752542021149557615814002501262285941302164715509792592309907965473761255176567513575178296664547791745011299614890304639947132962107340437518957359614589019389713111790429782856475032031986915140287080859904801094121472213179476477726224142548545403321571853061422881375850430633217518297986622371721591607716692547487389866549494501146540628433663937900397692656721463853067360965712091807638327166416274888800786925602902284721040317211860820419000422966171196377921337575114959501566049631862947265473642523081770367515906735023507283540567040386743513622224771589150495309844489333096340878076932599397805419341447377441842631298608099888687413260472156951623965864573021631598193195167353812974167729478672422924654366800980676928238280689964004824354037014163149658979409243237896907069779422362508221688957383798623001593776471651228935786015881617557829735233446042815126272037343146531977774160319906655418763979293344195215413418994854447345673831624993419131814809277771038638773431772075456545322077709212019051660962804909263601975988281613323166636528619326686336062735676303544776280350450777235547105859548702790814356240145171806246436267945612753181340783303362542327839449753824372058353114771199260638133467768796959703098339130771098704085913374641442822772634659470474587847787201927715280731767907707157213444730605700733492436931138350493163128404251219256517980694113528013147013047816437885185290928545201165839341965621349143415956258658655705526904965209858033850722426482939728584783163057777560688876446248246857926039535277348030480290058760758251047470916439613626760449256274204208320856611906254543372131535958450687724602901618766795240616342522577195429162991930645537799140373404328752628889639958794757291746426357455254079079451096596094025228879710893145669136867228748940560101503308617928680920874760917824938589009714909675985261365549781893129784821682998948722658804857564014270477555132379641451523746234364542858444795265867821051141354735739523113427166102135969536231442952484937187110145765403590279934403742007310578539062198387447808478489683321445713868751943506430218453191048481005370614680674919278191197939952061419663428754440643745123718192179998391015919561814675142691239748940907186494231961567945208095146550225231603881930142093762137855956638937787083039069792077346722182562599661501421503068038447734549202605414665925201497442850732518666002132434088190710486331734649651453905796268561005508106658796998163574736384052571459102897064140110971206280439039759515677157700420337869936007145700761837429730630167035304978712765741218999396136823840562754017971567834557044149282890985997470986831660447628002814043700006231263552648213338200736042085715898977398843590176678908013702281939952867057898524138246031494684497028260278823536700735341052754278049856360612895663959404930889097740628529230898208702476099584693818523642673012028609985012116826754266485720264046752694213154019600000';
+document.getElementById('piBg').textContent=PI.repeat(20);
 
-  const PI_DIGITS = '31415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938446095505822317253594081284811174502841027019385211055596446229489549303819644288109756659334461284756482337867831652712019091456485669234603486104543266482133936072602491412737245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094330572703657595919530921861173819326117931051185480744623799627495673518857527248912279381830119491298336733624406566430860213949463952247371907021798609437027705392171762931767523846748184676694051320005681271452635608277857713427577896091736371787214684409012249534301465495853710507922796892589235420199561121290219608640344181598136297747713099605187072113499999983729780499510597317328160963185950244594553469083026425223082533446850352619311881710100031378387528865875332083814206171776691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989380952572010654858632788659361533818279682303019520353018529689957736225994138912497217752834791315155748572424541506959508295331168617278558890750983817546374649393192550604009277016711390098488240128583616035637076601047101819429555961989467678374494482553797747268471040475346462080466842590694912933136770289891521047521620569660240580381501935112533824300355876402474964732639141992726042699227967823547816360093417216412199245863150302861829745557067498385054945885869269956909272107975093029553211653449872027559602364806654991198818347977535663698074265425278625518184175746728909777727938000816470600161452491921732172147723501414419735685481613611573525521334757418494684385233239073941433345477624168625189835694855620992192221842725502542568876717904946016534668049886272327917860857843838279679766814541009538837863609506800642251252051173929848960841284886269456042419652850222106611863067442786220391949450471237137869609563643719172874677646575739624138908658326459958133904780275900994657640789512694683983525957098258226205224894077267194782684826014769909026401363944374553050682034962524517493996514314298091906592509372216964615157098583874105978859597729754989301617539284681382686838689427741559918559252459539594310499725246808459872736446958486538367362226260991246080512438843904512441365497627807977156914359977001296160894416948685558484063534220722258284886481584560285060168427394522674676788952521385225499546667278239864565961163548862305774564980355936345681743241125150760694794510965960940252288797108931456691368672287489405601015033086179286809208747609178249385890097149096759852613655497818931297848216829989487226588048575640142704775551323796414515237462343645428584447952658678210511413547357395231134271661021359695362314429524849371871101457654035902799344037420073105785390621983874478084784896833214457138687519435064302184531910484810053706146806749192781911979399520614196634287544406437451237181921799983910159195618146751426912397489409071864942319615679452080951465502252316038819301420937621378559566389377870830390697920773467221825625996615014215030680384477345492026054146659252014974428507325186660021324340881907104863317346496514539057962685610055081066587969981635747363840525714591028970641401109712062804390397595156771577004203378699360072305587631763594218731251471205329281918261861258673215791984148488291644706095752706957220917567116722910981690915280173506712748583222871835209353965725121083579151369882091444210067510334671103141267111369908658516398315019701651511685171437657618351556508849099898599823873455283316355076479185358932261854896321329330898570642046752590709154814165498594616371802709819943099244889575712828905923233260972997120844335732654893823911932597463667305836041428138830320382490375898524374417029132765618093773444030707469211201913020330380197621101100449293215160842444859637669838952286847831235526582131449576857262433441893039686426243410773226978028073189154411010446823252716201052652272111660396665573092547110557853763466820653109896526918620564769312570586356620185581007293606598764861179104533488503461136576867532494416680396265797877185560845529654126654085306143444318586769751456614068007002378776591344017127494704205622305389945613140711270004078547332699390814546646458807972708266830634328587856983052358089330657574067954571637752542021149557615814002501262285941302164715509792592309907965473761255176567513575178296664547791745011299614890304639947132962107340437518957359614589019389713111790429782856475032031986915140287080859904801094121472213179476477726224142548545403321571853061422881375850430633217518297986622371721591607716692547487389866549494501146540628433663937900397692656721463853067360965712091807638327166416274888800786925602902284721040317211860820419000422966171196377921337575114959501566049631862947265473642523081770367515906735023507283540567040386743513622224771589150495309844489333096340878076932599397805419341447377441842631298608099888687413260472156951623965864573021631598193195167353812974167729478672422924654366800980676928238280689964004824354037014163149658979409243237896907069779422362508221688957383798623001593776471651228935786015881617557829735233446042815126272037343146531977774160319906655418763979293344195215413418994854447345673831624993419131814809277771038638773431772075456545322077709212019051660962804909263601975988281613323166636528619326686336062735676303544776280350450777235547105859548702790814356240145171806246436267945612753181340783303362542327839449753824372058353114771199260638133467768796959703098339130771098704085913374641442822772634659470474587847787201927715280731767907707157213444730605700733492436931138350493163128404251219256517980694113528013147013047816437885185290928545201165839341965621349143415956258658655705526904965209858033850722426482939728584783163057777560688876446248246857926039535277348030480290058760758251047470916439613626760449256274204208320856611906254543372131535958450687724602901618766795240616342522577195429162991930645537799140373404328752628889639958794757291746426357455254079079451096596094025228879710893145669136867228748940560101503308617928680920874760917824938589009714909675985261365549781893129784821682998948722658804857564014270477555132379641451523746234364542858444795265867821051141354735739523113427166102135969536231442952484937187110145765403590279934403742007310578539062198387447808478489683321445713868751943506430218453191048481005370614680674919278191197939952061419663428754440643745123718192179998391015919561814675142691239748940907186494231961567945208095146550225231603881930142093762137855956638937787083039069792077346722182562599661501421503068038447734549202605414665925201497442850732518666002132434088190710486331734649651453905796268561005508106658796998163574736384052571459102897064140110971206280439039759515677157700420337869936007145700761837429730630167035304978712765741218999396136823840562754017971567834557044149282890985997470986831660447628002814043700006231263552648213338200736042085715898977398843590176678908013702281939952867057898524138246031494684497028260278823536700735341052754278049856360612895663959404930889097740628529230898208702476099584693818523642673012028609985012116826754266485720264046752694213154019600000';
+// TIERS now bucket by chunk LENGTH (number of digits), not position range
+// This prevents 1-digit spam from appearing in every tier
+const TIERS=[
+  {label:'Tiny (1–9 digits)',minLen:1,maxLen:9},
+  {label:'Small (10–99)',minLen:10,maxLen:99},
+  {label:'Medium (100–999)',minLen:100,maxLen:999},
+  {label:'Large (1K–9K)',minLen:1000,maxLen:9999},
+  {label:'Huge (10K–99K)',minLen:10000,maxLen:99999},
+  {label:'Mega (100K–999K)',minLen:100000,maxLen:999999},
+  {label:'Giga (1M+)',minLen:1000000,maxLen:Infinity}
+];
 
-  // Fill background with pi digits
-  document.getElementById('piBg').textContent = PI_DIGITS.repeat(20);
+function setCk(n,v,d=365){const x=new Date();x.setTime(x.getTime()+d*864e5);document.cookie=`${n}=${encodeURIComponent(JSON.stringify(v))};expires=${x.toUTCString()};path=/`}
+function getCk(n){const m=document.cookie.split('; ').find(r=>r.startsWith(n+'='));if(!m)return null;try{return JSON.parse(decodeURIComponent(m.split('=')[1]))}catch{return null}}
+function getSubChunks(){return new Set(getCk('cp_sub')||[])}
+function addSubChunk(s,e){const x=getSubChunks();x.add(s+'-'+e);setCk('cp_sub',[...x])}
+function getSavedName(){return getCk('cp_name')||''}
+function saveName(n){setCk('cp_name',n)}
+function getSessionSubs(){return getCk('cp_sess')||[]}
+function addSessionSub(e){const s=getSessionSubs();s.unshift(e);setCk('cp_sess',s.slice(0,20),1)}
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(type?' '+type:'')+' show';setTimeout(()=>t.classList.remove('show'),3500)}
+function openModal(title,body){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modal').style.display='flex'}
+function closeModal(){document.getElementById('modal').style.display='none'}
+async function sb(endpoint,opts={}){
+  const r=await fetch(SB_URL+'/rest/v1/'+endpoint,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':opts.prefer||'return=representation',...(opts.headers||{})},...opts});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'Supabase error')}
+  return r.json().catch(()=>null)
+}
 
-  let allChunks = [];
+let gtRanges=[];
+async function loadGTRanges(){try{const d=await sb('ground_truth_ranges?select=start_digit,end_digit&order=start_digit.asc');gtRanges=d||[]}catch{}}
+function isGTCovered(s,e){return gtRanges.some(r=>r.start_digit<=s&&r.end_digit>=e)}
+function gtCoverageInfo(start,end){
+  const cov=gtRanges.filter(r=>r.start_digit<=end&&r.end_digit>=start);
+  if(!cov.length)return null;
+  return Math.min(...cov.map(r=>r.end_digit),end);
+}
 
-  // ── Cookie helpers ──────────────────────────────────────────────
-  function setCookie(name, value, days = 365) {
-    const d = new Date();
-    d.setTime(d.getTime() + days * 864e5);
-    document.cookie = `${name}=${encodeURIComponent(JSON.stringify(value))};expires=${d.toUTCString()};path=/`;
-  }
+let allSubs=[],allChunks=[],groundTruthActive=false,currentTier=null,currentFilter='all';
 
-  function getCookie(name) {
-    const match = document.cookie.split('; ').find(r => r.startsWith(name + '='));
-    if (!match) return null;
-    try { return JSON.parse(decodeURIComponent(match.split('=')[1])); } catch { return null; }
-  }
+function getSlice(sub,ts,te){
+  const os=Math.max(ts,sub.start_digit),oe=Math.min(te,sub.end_digit);
+  if(os>oe)return null;
+  return sub.digits.slice(os-sub.start_digit,os-sub.start_digit+(oe-os+1));
+}
 
-  // submitted chunks: Set of "start-end" strings
-  function getSubmittedChunks() { return new Set(getCookie('crowdpi_submitted') || []); }
-  function addSubmittedChunk(start, end) {
-    const s = getSubmittedChunks();
-    s.add(start + '-' + end);
-    setCookie('crowdpi_submitted', [...s]);
-  }
-
-  // contributor name memory
-  function getSavedName() { return getCookie('crowdpi_name') || ''; }
-  function saveName(name) { setCookie('crowdpi_name', name); }
-
-  // session submissions (for "your submissions" panel)
-  function getSessionSubmissions() { return getCookie('crowdpi_session') || []; }
-  function addSessionSubmission(entry) {
-    const s = getSessionSubmissions();
-    s.unshift(entry);
-    setCookie('crowdpi_session', s.slice(0, 20), 1); // keep last 20, expire in 1 day
-  }
-
-  // ── On load: restore name and last tab ─────────────────────────
-  window.addEventListener('DOMContentLoaded', () => {
-    const savedName = getSavedName();
-    if (savedName) document.getElementById('contributorName').value = savedName;
-
-    const lastTab = getCookie('crowdpi_tab');
-    if (lastTab && ['compute','submit','leaderboard','howto'].includes(lastTab)) {
-      const tabEl = [...document.querySelectorAll('.tab')].find(t => t.getAttribute('onclick')?.includes("'" + lastTab + "'"));
-      if (tabEl) { tabEl.click(); }
-    }
-
-    renderMySubmissions();
+function buildChunks(subs){
+  const map={};
+  subs.forEach(d=>{const k=d.start_digit+'-'+d.end_digit;if(!map[k])map[k]={start:d.start_digit,end:d.end_digit,submissions:[],contributors:[]};map[k].submissions.push(d.digits);map[k].contributors.push(d.contributor)});
+  const mine=getSubChunks();
+  return Object.values(map).map(c=>{
+    const cLen=c.end-c.start+1,votes=[],voted=new Set();
+    c.submissions.forEach((digs,i)=>{const con=c.contributors[i];if(voted.has(con))return;voted.add(con);votes.push({digits:digs,contributor:con,source:'exact'})});
+    subs.forEach(o=>{if(o.start_digit===c.start&&o.end_digit===c.end)return;if(voted.has(o.contributor))return;if(o.start_digit>c.start||o.end_digit<c.end)return;const sl=getSlice(o,c.start,c.end);if(sl){voted.add(o.contributor);votes.push({digits:sl,contributor:o.contributor,source:o.start_digit+'-'+o.end_digit})}});
+    const pVoted=new Set();let pCov=0,pAgr=0;const pContribs=new Set();
+    subs.forEach(o=>{if(o.start_digit===c.start&&o.end_digit===c.end)return;if(voted.has(o.contributor)||pVoted.has(o.contributor))return;if(o.start_digit<=c.start&&o.end_digit>=c.end)return;const os=Math.max(c.start,o.start_digit),oe=Math.min(c.end,o.end_digit);if(os>oe)return;const olen=oe-os+1;c.submissions.forEach(cd=>{const cs=cd.slice(os-c.start,os-c.start+olen),os2=getSlice(o,os,oe);if(cs&&os2){pCov+=olen;if(cs===os2)pAgr+=olen;pContribs.add(o.contributor);pVoted.add(o.contributor)}})});
+    const pPct=cLen>0?Math.round((Math.min(pCov,cLen)/cLen)*100):0,pAcc=pCov>0?Math.round((pAgr/pCov)*100):null;
+    const vc={};votes.forEach(v=>vc[v.digits]=(vc[v.digits]||0)+1);
+    const maxA=votes.length>0?Math.max(...Object.values(vc)):0,tot=votes.length,allA=Object.keys(vc).length===1;
+    let status;
+    if(tot>=3&&allA)status='verified';else if(tot>=2&&!allA)status='disputed';else if(pPct>=100&&pAcc===100)status='verified';else if(pPct>0)status='partial';else status='pending';
+    return{...c,votes,crossVotes:votes.filter(v=>v.source!=='exact'),maxAgree:maxA,total:tot,status,pPct,pAcc,pContribs:[...pContribs],isMine:mine.has(c.start+'-'+c.end),groundTruth:null,gtAccuracy:null,gtFirstErrorDigit:null,gtExpected:null,gtGot:null};
   });
+}
 
-  // ── Visual Map ──────────────────────────────────────────────────
-  // overlap-aware verification: for each digit position, collect all
-  // submitted values from any chunk that covers it, then check consensus
+async function loadStats(){
+  try{
+    const d=await sb('pi_submissions?select=start_digit,end_digit,contributor&limit=1000');if(!d)return;
+    document.getElementById('statChunks').textContent=d.length.toLocaleString();
+    document.getElementById('statContribs').textContent=new Set(d.map(x=>x.contributor)).size.toLocaleString();
+    const cm={};d.forEach(x=>{const k=x.start_digit+'-'+x.end_digit;cm[k]=(cm[k]||0)+1});
+    document.getElementById('statVerified').textContent=Object.values(cm).filter(c=>c>=3).length.toLocaleString();
+    let tot=0;Object.keys(cm).forEach(r=>{const[s,e]=r.split('-').map(Number);tot+=(e-s+1)});
+    document.getElementById('statDigits').textContent=tot>999999?(tot/1e6).toFixed(1)+'M':tot>999?(tot/1000).toFixed(1)+'K':tot;
+  }catch{}
+}
 
-  let visualData = null; // cached submission data for visual tab
+async function loadLeaderboard(){
+  try{await loadAllSubs();allChunks=buildChunks(allSubs);renderTierGrid()}
+  catch(e){document.getElementById('tierGrid').innerHTML='<div style="color:var(--accent2);font-size:11px">Error: '+e.message+'</div>'}
+}
+async function loadAllSubs(){const d=await sb('pi_submissions?select=start_digit,end_digit,digits,contributor,submitted_at&order=start_digit.asc&limit=1000');allSubs=d||[]}
 
-  async function loadVisualMap() {
-    const mapEl = document.getElementById('visualMap');
-    const emptyEl = document.getElementById('visualEmpty');
-    mapEl.innerHTML = '<span style="color:var(--muted);font-size:11px">Loading...</span>';
+function renderTierGrid(){
+  const grid=document.getElementById('tierGrid');grid.innerHTML='';
+  TIERS.forEach((tier,i)=>{
+    // Filter by chunk LENGTH
+    const chunks=allChunks.filter(c=>{const l=c.end-c.start+1;return l>=tier.minLen&&l<=tier.maxLen});
+    if(!chunks.length)return;
+    const verified=chunks.filter(c=>c.status==='verified').length;
+    const pct=chunks.length>0?Math.round((verified/chunks.length)*100):0;
+    const color=pct===100?'var(--verified)':pct>=50?'var(--partial)':'var(--pending)';
+    const card=document.createElement('div');
+    card.className='tier-card'+(currentTier===i?' active':'');
+    card.innerHTML=`<div style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px">${tier.label}</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${chunks.length} chunk${chunks.length!==1?'s':''}</div>
+      <div style="font-size:18px;font-weight:700;color:${color}">${pct}%</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">${verified}/${chunks.length} verified</div>
+      <div class="tier-bar"><div class="tier-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+    card.addEventListener('click',()=>openTierDetail(i,tier,chunks));
+    grid.appendChild(card);
+  });
+}
 
-    try {
-      const data = await supabaseFetch('pi_submissions?select=start_digit,end_digit,digits,contributor,submitted_at&order=start_digit.asc&limit=1000');
+function openTierDetail(i,tier,chunks){
+  currentTier=i;currentFilter='all';
+  document.querySelectorAll('.tier-card').forEach((c,j)=>c.classList.toggle('active',j===i));
+  document.getElementById('tierDetailTitle').textContent=tier.label;
+  document.getElementById('tierDetailMeta').textContent=chunks.length+' chunks · '+chunks.filter(c=>c.status==='verified').length+' verified';
+  document.getElementById('tierDetail').style.display='block';
+  document.querySelectorAll('.filter-btn').forEach((b,j)=>b.classList.toggle('active',j===0));
+  renderChunkTable(chunks);
+  document.getElementById('tierDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeTierDetail(){currentTier=null;document.getElementById('tierDetail').style.display='none';document.querySelectorAll('.tier-card').forEach(c=>c.classList.remove('active'))}
 
-      if (!data || data.length === 0) {
-        mapEl.style.display = 'none';
-        emptyEl.style.display = 'block';
-        renderTimeline([]);
-        return;
-      }
+function filterChunks(f,btn){
+  currentFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  if(currentTier===null)return;
+  const tier=TIERS[currentTier];
+  renderChunkTable(allChunks.filter(c=>{const l=c.end-c.start+1;return l>=tier.minLen&&l<=tier.maxLen}));
+}
 
-      visualData = data;
-      mapEl.style.display = 'flex';
-      emptyEl.style.display = 'none';
+function renderChunkTable(all){
+  const filtered=currentFilter==='wrong'?all.filter(c=>c.groundTruth==='wrong'):currentFilter==='all'?all:all.filter(c=>c.status===currentFilter);
+  const empty=document.getElementById('lbEmpty'),table=document.getElementById('lbTable'),tbody=document.getElementById('lbBody');
+  if(!filtered.length){empty.innerHTML='<div class="empty-pi">π</div><div>No '+currentFilter+' chunks</div>';empty.style.display='block';table.style.display='none';return}
+  empty.style.display='none';table.style.display='table';
+  tbody.innerHTML=filtered.map((c,i)=>{
+    const conf=Math.round((c.maxAgree/Math.max(c.total,3))*100);
+    const cc=c.status==='verified'?'var(--verified)':c.status==='disputed'?'var(--disputed)':c.status==='partial'?'var(--partial)':'var(--pending)';
+    const uC=[...new Set(c.contributors)].slice(0,2).join(', ')+(c.contributors.length>2?'...':'');
+    const vc={};c.votes.forEach(v=>vc[v.digits]=(vc[v.digits]||0)+1);
+    const top=Object.entries(vc).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+    const myTag=c.isMine?' <span style="color:var(--accent);font-size:9px">★ YOU</span>':'';
+    const crossTag=c.crossVotes.length>0?` <span style="color:var(--accent);font-size:9px">+${c.crossVotes.length}✕</span>`:'';
+    const gtB=buildGTBadge(c);const expId='exp-'+i;
+    return`<tr style="cursor:pointer${c.isMine?';background:rgba(127,255,212,.03)':''}" onclick="toggleExp('${expId}')">
+      <td><span class="chunk-range">${c.start.toLocaleString()}–${c.end.toLocaleString()}</span>${myTag}${gtB}</td>
+      <td style="color:var(--muted);font-size:11px">${uC}(${c.total})${crossTag}</td>
+      <td style="color:${c.status==='disputed'?'var(--disputed)':'var(--muted)'};font-size:11px;letter-spacing:1px">${top.slice(0,10)||'—'}…</td>
+      <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:${conf}%;background:${cc}"></div></div><span style="font-size:10px;color:${cc};min-width:28px">${conf}%</span></div></td>
+      <td><span class="badge badge-${c.status}">${c.status}</span></td>
+    </tr>
+    <tr id="${expId}" style="display:none"><td colspan="5" style="padding:12px;background:rgba(0,0,0,.2)">
+      ${c.pPct>0&&c.status!=='verified'?`<div style="font-size:11px;color:var(--partial);margin-bottom:8px;padding:6px 10px;background:rgba(127,255,212,.05);border:1px solid rgba(127,255,212,.15);border-radius:2px">⬡ ${c.pPct}% cross-checked — ${c.pAcc}% agreement</div>`:''}
+      ${buildExpand(c)}
+    </td></tr>`;
+  }).join('');
+}
 
-      // Find total range
-      const maxDigit = Math.max(...data.map(d => d.end_digit));
-      const CELL = 100; // each cell = 100 digits
-      const totalCells = Math.ceil(maxDigit / CELL) + 5; // a few empty cells at end
+function buildGTBadge(c){
+  if(groundTruthActive&&c.groundTruth){
+    if(c.groundTruth==='correct')return' <span class="badge badge-verified">✓ TRUE</span>';
+    if(c.groundTruth==='wrong')return` <span class="badge badge-wrong">✗ ${c.gtAccuracy}% · err@${c.gtFirstErrorDigit?.toLocaleString()} (got ${c.gtGot}≠${c.gtExpected})</span>`;
+    if(c.groundTruth==='out_of_range')return' <span class="badge" style="background:rgba(255,217,61,.08);color:var(--muted)">beyond ref</span>';
+  }
+  if(isGTCovered(c.start,c.end))return' <span class="badge badge-partial">⬡ GT</span>';
+  return'';
+}
 
-      // Build per-digit consensus map using overlap logic
-      // For efficiency, work at cell resolution (100-digit blocks)
-      // For each cell, gather all submissions that overlap it
-      const cellStatus = []; // array of {status, count, contributors, start, end}
+function buildExpand(c){
+  const vc={};c.votes.forEach(v=>{if(!vc[v.digits])vc[v.digits]={count:0,contributors:[],sources:[]};vc[v.digits].count++;vc[v.digits].contributors.push(v.contributor);vc[v.digits].sources.push(v.source)});
+  return Object.entries(vc).map(([digits,info])=>{
+    const fake=/^(.)\1{9,}/.test(digits),cross=info.sources.filter(s=>s!=='exact').length;
+    return`<div style="margin-bottom:8px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:2px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px">By <strong style="color:var(--text)">${[...new Set(info.contributors)].join(', ')}</strong> · ${info.count} vote${info.count>1?'s':''}${fake?' <span style="color:var(--disputed)">⚠ POSSIBLY FAKE</span>':''}${cross>0?` <span style="color:var(--accent)">+${cross} cross-verified</span>`:''}</div>
+      <div style="font-size:12px;letter-spacing:1px;word-break:break-all;color:var(--accent);line-height:1.8">${digits.slice(0,100)}${digits.length>100?'<span style="color:var(--muted)">…</span>':''}</div>
+      ${digits.length>100?`<button class="btn btn-secondary" style="margin-top:8px;padding:4px 10px;font-size:10px" onclick="event.stopPropagation();openModal('Full Submission','<div style=\\'font-size:12px;letter-spacing:1px;word-break:break-all;line-height:1.8;color:var(--text);background:var(--bg);padding:14px;border:1px solid var(--border);border-radius:2px\\'>${digits.slice(0,500)}…</div><div style=\\'margin-top:8px;font-size:11px;color:var(--muted)\\'>${digits.length.toLocaleString()} digits total</div>')">See all ${digits.length.toLocaleString()} digits</button>`:''}
+    </div>`;
+  }).join('');
+}
+function toggleExp(id){const r=document.getElementById(id);r.style.display=r.style.display==='none'?'table-row':'none'}
 
-      for (let c = 0; c < totalCells; c++) {
-        const cellStart = c * CELL + 1;
-        const cellEnd = cellStart + CELL - 1;
+function adminVerify(){
+  const pw=prompt('🔐 Admin password:');
+  if(pw!=='ich_bin_sehr_farty_tarty'){showToast('Wrong password!','error');return}
+  groundTruthActive=true;
+  let correct=0,wrong=0,out=0,maxChecked=0;
+  allChunks=allChunks.map(c=>{
+    if(c.end>PI.length){out++;return{...c,groundTruth:'out_of_range'}}
+    const vc={};c.votes.forEach(v=>vc[v.digits]=(vc[v.digits]||0)+1);
+    const maj=Object.entries(vc).sort((a,b)=>b[1]-a[1])[0]?.[0];
+    if(!maj)return{...c,groundTruth:'no_data'};
+    const known=PI.slice(c.start-1,c.end),len=Math.min(maj.length,known.length);
+    let firstErr=-1,correctCount=0;
+    for(let i=0;i<len;i++){if(maj[i]===known[i])correctCount++;else if(firstErr===-1)firstErr=i}
+    const acc=Math.round((correctCount/len)*100),ok=firstErr===-1;
+    if(ok)correct++;else wrong++;
+    maxChecked=Math.max(maxChecked,c.end);
+    return{...c,groundTruth:ok?'correct':'wrong',gtAccuracy:acc,gtFirstErrorDigit:firstErr!==-1?c.start+firstErr:null,gtExpected:firstErr!==-1?known[firstErr]:null,gtGot:firstErr!==-1?maj[firstErr]:null};
+  });
+  sb('ground_truth_ranges',{method:'POST',body:JSON.stringify({start_digit:1,end_digit:maxChecked,correct_count:correct,wrong_count:wrong})})
+    .then(()=>{gtRanges.push({start_digit:1,end_digit:maxChecked});showToast(`✓ Saved! ${correct} correct, ${wrong} wrong, ${out} beyond ref`)})
+    .catch(()=>showToast(`✓ Done! ${correct} correct, ${wrong} wrong`));
+  if(currentTier!==null){const tier=TIERS[currentTier];renderChunkTable(allChunks.filter(c=>{const l=c.end-c.start+1;return l>=tier.minLen&&l<=tier.maxLen}))}
+  renderTierGrid();
+}
 
-        // Find all submissions overlapping this cell
-        const overlapping = data.filter(d => d.start_digit <= cellEnd && d.end_digit >= cellStart);
+const PI_REF='31415926535897932384626433832795';
+function updatePreview(){
+  let digits=document.getElementById('subDigits').value.trim().replace(/\s/g,'');
+  const start=parseInt(document.getElementById('subStart').value)||1;
+  const pb=document.getElementById('previewBox'),w=document.getElementById('conventionWarn'),gt=document.getElementById('gtNotice');
+  if(!digits||digits.length<3){pb.style.display='none';gt.style.display='none';return}
+  pb.style.display='block';w.style.display='none';
+  document.getElementById('previewInner').innerHTML=digits.slice(0,30).split('').map((d,i)=>{
+    const pos=start+i,exp=PI_REF[pos-1];
+    return`<span style="color:${exp==null?'var(--text)':d===exp?'var(--verified)':'var(--disputed)'}" title="Digit ${pos}">${d}</span>`;
+  }).join('')+(digits.length>30?'<span style="color:var(--muted)">…</span>':'');
+  if(start===1&&digits.slice(0,5)==='14159'){
+    w.style.cssText='display:block;border-color:rgba(255,217,61,.3);background:rgba(255,217,61,.04);color:var(--pending);padding:7px 12px;border-radius:2px;font-size:11px;margin-top:6px';
+    w.innerHTML="⚠ Skipped leading <strong style='color:var(--text)'>3</strong> — will be auto-added on submit!";
+  }else if(start===1&&digits.slice(0,3)==='314'){
+    w.style.cssText='display:block;border-color:rgba(127,255,212,.3);background:rgba(127,255,212,.04);color:var(--verified);padding:7px 12px;border-radius:2px;font-size:11px;margin-top:6px';
+    w.innerHTML='✓ Convention looks correct!';
+  }
+  // GT notice: compare user's digits against ground truth
+  // Only show green banner if digits are actually correct — no banner if previous submission had errors
+  const end=start+digits.length-1;
+  const coverEnd=gtCoverageInfo(start,end);
+  if(coverEnd!==null){
+    const knownSlice=PI.slice(start-1,coverEnd),userSlice=digits.slice(0,knownSlice.length);
+    let firstErr=-1;
+    for(let i=0;i<Math.min(userSlice.length,knownSlice.length);i++){if(userSlice[i]!==knownSlice[i]){firstErr=i;break}}
+    gt.style.display='block';
+    if(firstErr!==-1){
+      gt.style.cssText='display:block;border:1px solid rgba(255,107,107,.3);background:rgba(255,107,107,.04);color:var(--disputed);padding:8px 12px;border-radius:2px;font-size:11px;margin-bottom:10px';
+      gt.innerHTML=`⚠ Your digits differ from ground truth at digit <strong>${(start+firstErr).toLocaleString()}</strong> — you have <strong>${userSlice[firstErr]}</strong>, expected <strong>${knownSlice[firstErr]}</strong>. You can still submit!`;
+    }else{
+      gt.style.cssText='display:block;border:1px solid rgba(127,255,212,.2);background:rgba(127,255,212,.05);color:var(--accent);padding:8px 12px;border-radius:2px;font-size:11px;margin-bottom:10px';
+      gt.innerHTML=`✓ Digits 1–${coverEnd.toLocaleString()} of this range have been ground-truth verified against known π`;
+    }
+  }else{gt.style.display='none'}
+}
 
-        if (overlapping.length === 0) {
-          cellStatus.push({ status: 'uncovered', count: 0, contributors: [], cellStart, cellEnd });
-          continue;
-        }
+async function submitChunk(){
+  let digits=document.getElementById('subDigits').value.trim().replace(/\s/g,'');
+  const start=parseInt(document.getElementById('subStart').value);
+  const name=document.getElementById('subName').value.trim();
+  if(!name){showToast('Please enter your name','error');return}
+  if(!digits){showToast('Please paste your digits','error');return}
+  if(!/^\d+$/.test(digits)){showToast('Digits only (0–9)','error');return}
+  if(isNaN(start)||start<1){showToast('Invalid start digit','error');return}
+  if(start===1&&digits.slice(0,5)==='14159'){digits='3'+digits;document.getElementById('subDigits').value=digits;showToast('Auto-fixed: prepended missing 3 ✓');updatePreview()}
+  const end=start+digits.length-1;
+  if(getSubChunks().has(start+'-'+end)){showToast('You already submitted this range!','error');return}
+  const btn=document.getElementById('subBtn');btn.disabled=true;btn.innerHTML='<span class="loading"></span>Checking...';
+  try{const ex=await sb(`pi_submissions?select=id&contributor=eq.${encodeURIComponent(name)}&start_digit=eq.${start}&end_digit=eq.${end}&limit=1`);if(ex&&ex.length>0){showToast(`${name} already submitted this range!`,'error');btn.disabled=false;btn.textContent='Submit Chunk';return}}catch{}
+  btn.innerHTML='<span class="loading"></span>Submitting...';
+  try{
+    await sb('pi_submissions',{method:'POST',body:JSON.stringify({start_digit:start,end_digit:end,chunk_length:digits.length,digits,contributor:name,submitted_at:new Date().toISOString()})});
+    addSubChunk(start,end);saveName(name);addSessionSub({start,end,length:digits.length,time:new Date().toLocaleTimeString()});
+    showToast(`✓ Submitted! Thanks ${name}!`);
+    document.getElementById('subDigits').value='';document.getElementById('subStatus').textContent=`✓ Digits ${start.toLocaleString()}–${end.toLocaleString()}`;
+    renderMySessionSubs();loadStats();
+  }catch(e){showToast('Error: '+e.message,'error')}
+  btn.disabled=false;btn.textContent='Submit Chunk';
+}
 
-        // For each overlapping submission, extract the digits covering this cell
-        const cellDigitSets = overlapping.map(sub => {
-          const overlapStart = Math.max(cellStart, sub.start_digit);
-          const overlapEnd = Math.min(cellEnd, sub.end_digit);
-          const sliceFrom = overlapStart - sub.start_digit;
-          const sliceTo = sliceFrom + (overlapEnd - overlapStart + 1);
-          return {
-            digits: sub.digits.slice(sliceFrom, sliceTo),
-            contributor: sub.contributor,
-            range: overlapStart + '-' + overlapEnd
-          };
-        });
+function renderMySessionSubs(){
+  const subs=getSessionSubs(),card=document.getElementById('mySubsCard'),tbody=document.getElementById('mySubsBody');
+  if(!subs.length){card.style.display='none';return}
+  card.style.display='block';
+  tbody.innerHTML=subs.map(s=>`<tr><td><span class="chunk-range">${s.start.toLocaleString()}–${s.end.toLocaleString()}</span></td><td style="color:var(--muted)">${s.length.toLocaleString()}</td><td style="color:var(--muted);font-size:11px">${s.time}</td></tr>`).join('');
+}
 
-        // Group by digit content to find consensus
-        const digitCounts = {};
-        cellDigitSets.forEach(s => {
-          digitCounts[s.digits] = (digitCounts[s.digits] || 0) + 1;
-        });
-        const maxAgree = Math.max(...Object.values(digitCounts));
-        const total = cellDigitSets.length;
-        const allAgree = Object.keys(digitCounts).length === 1;
+let calcResult={digits:'',start:1};
+function computeInBrowser(){
+  const start=parseInt(document.getElementById('calcStart').value),size=parseInt(document.getElementById('calcSize').value);
+  if(isNaN(start)||start<1){showToast('Start must be at least 1','error');return}
+  if(start+size-1>PI.length){showToast(`Browser calc supports up to ${PI.length.toLocaleString()} digits`,'error');return}
+  const btn=document.getElementById('calcBtn');btn.disabled=true;btn.innerHTML='<span class="loading"></span>Computing...';
+  const fill=document.getElementById('calcProgress');let p=0;
+  const iv=setInterval(()=>{p=Math.min(p+Math.random()*20,90);fill.style.width=p+'%'},80);
+  setTimeout(()=>{clearInterval(iv);fill.style.width='100%';const digits=PI.slice(start-1,start-1+size);calcResult={digits,start};document.getElementById('calcDigits').textContent=digits;document.getElementById('calcMeta').textContent=`Digits ${start.toLocaleString()}–${(start+size-1).toLocaleString()} · ${size.toLocaleString()} digits`;document.getElementById('calcOutput').style.display='block';btn.disabled=false;btn.textContent='Compute';setTimeout(()=>fill.style.width='0%',800)},400+Math.random()*300);
+}
+function sendCalcToSubmit(){document.getElementById('subStart').value=calcResult.start;document.getElementById('subDigits').value=calcResult.digits;document.querySelectorAll('.tab')[1].click();updatePreview();showToast('Loaded into submit tab!')}
 
-        let status;
-        if (total >= 3 && allAgree) status = 'verified';
-        else if (total >= 2 && !allAgree) status = 'disputed';
-        else status = 'pending';
-
-        cellStatus.push({
-          status,
-          count: total,
-          contributors: [...new Set(overlapping.map(d => d.contributor))],
-          cellStart,
-          cellEnd,
-          allAgree
-        });
-      }
-
-      // Render cells
-      mapEl.innerHTML = '';
-      cellStatus.forEach((cell, i) => {
-        const el = document.createElement('div');
-        el.title = `Digits ${cell.cellStart}–${cell.cellEnd}`;
-        el.style.cssText = `
-          width: 16px; height: 16px; border-radius: 2px; cursor: pointer;
-          transition: transform 0.1s, opacity 0.1s;
-          background: ${cell.status === 'verified' ? 'var(--verified)' :
-                        cell.status === 'disputed' ? 'var(--disputed)' :
-                        cell.status === 'pending' ? 'var(--pending)' : '#222233'};
-          opacity: ${cell.status === 'uncovered' ? '0.4' : cell.count >= 3 ? '1' : '0.7'};
-        `;
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.4)'; el.style.zIndex = 10; el.style.position = 'relative'; });
-        el.addEventListener('mouseleave', () => { el.style.transform = ''; el.style.zIndex = ''; el.style.position = ''; });
-        el.addEventListener('click', () => showMapDetail(cell));
-        mapEl.appendChild(el);
+async function loadVisualMap(){
+  const mapEl=document.getElementById('visualMap'),emptyEl=document.getElementById('visualEmpty');
+  mapEl.innerHTML='<span style="color:var(--muted);font-size:11px">Loading...</span>';
+  try{
+    const data=await sb('pi_submissions?select=start_digit,end_digit,digits,contributor,submitted_at&order=start_digit.asc&limit=1000');
+    if(!data||!data.length){mapEl.style.display='none';emptyEl.style.display='block';renderTimeline([]);return}
+    mapEl.style.display='flex';emptyEl.style.display='none';
+    const maxD=Math.max(...data.map(d=>d.end_digit)),CELL=100,total=Math.ceil(maxD/CELL)+5;
+    mapEl.innerHTML='';
+    for(let c=0;c<total;c++){
+      const cs=c*CELL+1,ce=cs+CELL-1;
+      const ov=data.filter(d=>d.start_digit<=ce&&d.end_digit>=cs);
+      let status='uncovered',count=0,contributors=[];
+      if(ov.length){const cdM={};ov.forEach(s=>{const sl=s.digits.slice(Math.max(cs,s.start_digit)-s.start_digit,Math.min(ce,s.end_digit)-s.start_digit+1);cdM[sl]=(cdM[sl]||0)+1});count=ov.length;contributors=[...new Set(ov.map(d=>d.contributor))];status=count>=3&&Object.keys(cdM).length===1?'verified':count>=2&&Object.keys(cdM).length>1?'disputed':'pending'}
+      const el=document.createElement('div');
+      el.style.cssText=`width:16px;height:16px;border-radius:2px;cursor:pointer;transition:transform .1s;background:${status==='verified'?'var(--verified)':status==='disputed'?'var(--disputed)':status==='pending'?'var(--pending)':'#222233'};opacity:${status==='uncovered'?.4:count>=3?1:.7}`;
+      el.addEventListener('mouseenter',()=>{el.style.transform='scale(1.4)';el.style.zIndex=10;el.style.position='relative'});
+      el.addEventListener('mouseleave',()=>{el.style.transform='';el.style.zIndex='';el.style.position=''});
+      el.addEventListener('click',()=>{
+        const card=document.getElementById('mapDetailCard'),content=document.getElementById('mapDetailContent');card.style.display='block';
+        if(status==='uncovered'){content.innerHTML=`Digits <strong style="color:var(--text)">${cs.toLocaleString()}–${ce.toLocaleString()}</strong> — <span style="color:var(--accent2)">Not yet submitted</span>`;return}
+        const sc=status==='verified'?'var(--verified)':status==='disputed'?'var(--disputed)':'var(--pending)';
+        content.innerHTML=`Digits <strong style="color:var(--text)">${cs.toLocaleString()}–${ce.toLocaleString()}</strong><br>Status: <span style="color:${sc}">${status.toUpperCase()}</span><br>Submissions: <span style="color:var(--text)">${count}</span><br>Contributors: <span style="color:var(--text)">${contributors.join(', ')||'—'}</span>`;
       });
-
-      renderTimeline(data);
-
-    } catch(e) {
-      mapEl.innerHTML = '<span style="color:var(--accent2);font-size:11px">Error loading map</span>';
-      console.error(e);
+      mapEl.appendChild(el);
     }
-  }
-
-  function showMapDetail(cell) {
-    const card = document.getElementById('mapDetailCard');
-    const content = document.getElementById('mapDetailContent');
-    card.style.display = 'block';
-
-    if (cell.status === 'uncovered') {
-      content.innerHTML = `
-        <span style="color:var(--text)">Digits ${cell.cellStart.toLocaleString()}–${cell.cellEnd.toLocaleString()}</span><br>
-        <span style="color:var(--accent2)">Not yet submitted</span> — be the first to compute this range!`;
-      return;
-    }
-
-    const statusColor = cell.status === 'verified' ? 'var(--verified)' : cell.status === 'disputed' ? 'var(--disputed)' : 'var(--pending)';
-    content.innerHTML = `
-      <span style="color:var(--text)">Digits ${cell.cellStart.toLocaleString()}–${cell.cellEnd.toLocaleString()}</span><br>
-      Status: <span style="color:${statusColor}">${cell.status.toUpperCase()}</span><br>
-      Submissions covering this range: <span style="color:var(--text)">${cell.count}</span><br>
-      Contributors: <span style="color:var(--text)">${cell.contributors.join(', ') || '—'}</span><br>
-      ${cell.status === 'disputed' ? '<span style="color:var(--disputed)">⚠ Submissions disagree — more needed to resolve</span>' : ''}
-      ${cell.status === 'pending' ? '<span style="color:var(--pending)">Submit this range to help verify it!</span>' : ''}
-    `;
-  }
-
-  function renderTimeline(data) {
-    const chart = document.getElementById('timelineChart');
-    const empty = document.getElementById('timelineEmpty');
-    chart.innerHTML = '';
-
-    if (!data || data.length === 0) {
-      chart.style.display = 'none';
-      empty.style.display = 'block';
-      return;
-    }
-
-    // Group by day
-    const byDay = {};
-    data.forEach(d => {
-      const day = d.submitted_at ? d.submitted_at.slice(0, 10) : 'unknown';
-      byDay[day] = (byDay[day] || 0) + 1;
-    });
-
-    const days = Object.keys(byDay).sort();
-    const max = Math.max(...Object.values(byDay));
-
-    chart.style.display = 'flex';
-    empty.style.display = 'none';
-
-    days.forEach(day => {
-      const count = byDay[day];
-      const height = Math.max(4, Math.round((count / max) * 64));
-      const bar = document.createElement('div');
-      bar.style.cssText = `
-        flex: 1; min-width: 8px; max-width: 24px;
-        height: ${height}px;
-        background: var(--accent);
-        opacity: 0.6;
-        border-radius: 2px 2px 0 0;
-        cursor: default;
-        transition: opacity 0.2s;
-      `;
-      bar.title = `${day}: ${count} submission${count > 1 ? 's' : ''}`;
-      bar.addEventListener('mouseenter', () => bar.style.opacity = '1');
-      bar.addEventListener('mouseleave', () => bar.style.opacity = '0.6');
-      chart.appendChild(bar);
-    });
-  }
-
-  // Known pi digits for convention checking
-  const PI_START = '31415926535897932384626433832795';
-
-  function updateDigitPreview() {
-    const digits = document.getElementById('submitDigits').value.trim().replace(/\s/g, '');
-    const start = parseInt(document.getElementById('submitStart').value) || 1;
-    const preview = document.getElementById('digitPreview');
-    const inner = document.getElementById('digitPreviewInner');
-    const warning = document.getElementById('conventionWarning');
-
-    if (!digits || digits.length < 3) { preview.style.display = 'none'; return; }
-    preview.style.display = 'block';
-    warning.style.display = 'none';
-
-    // Render first 30 digits with position numbers
-    const show = digits.slice(0, 30);
-    const colored = show.split('').map((d, i) => {
-      const pos = start + i;
-      const expected = PI_START[pos - 1];
-      const correct = expected ? d === expected : null;
-      const color = correct === null ? 'var(--text)' : correct ? 'var(--verified)' : 'var(--disputed)';
-      return `<span style="color:${color}" title="Digit ${pos}">${d}</span>`;
-    }).join('');
-    inner.innerHTML = colored + (digits.length > 30 ? '<span style="color:var(--muted)">…</span>' : '');
-
-    // Convention detection
-    if (start === 1) {
-      if (digits[0] === '1' && digits.slice(0,5) === '14159') {
-        warning.style.display = 'block';
-        warning.style.borderColor = 'rgba(255,217,61,0.3)';
-        warning.style.background = 'rgba(255,217,61,0.04)';
-        warning.style.color = 'var(--pending)';
-        warning.innerHTML = '⚠ Looks like you skipped the leading <strong style="color:var(--text)">3</strong> — no worries, it\'ll be auto-added when you submit!';
-      } else if (digits.slice(0,3) === '314' && digits[0] === '3') {
-        // correct, maybe show a green tick
-        warning.style.display = 'block';
-        warning.style.borderColor = 'rgba(127,255,212,0.3)';
-        warning.style.background = 'rgba(127,255,212,0.04)';
-        warning.style.color = 'var(--verified)';
-        warning.innerHTML = '✓ Digit 1 = 3 — convention looks correct!';
-      }
-    }
-
-  }
-
-  // ── Browser Calculator ──────────────────────────────────────────
-  let calcResult = { digits: '', start: 1 };
-
-  function computeInBrowser() {
-    const start = parseInt(document.getElementById('calcStart').value);
-    const size  = parseInt(document.getElementById('calcSize').value);
-
-    if (isNaN(start) || start < 1) { showToast('Start digit must be at least 1', 'error'); return; }
-    if (start + size - 1 > PI_DIGITS.length) {
-      showToast(`Browser calculator supports up to ${PI_DIGITS.length.toLocaleString()} digits. Use Python for more!`, 'error');
-      return;
-    }
-
-    const btn = document.getElementById('calcBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="loading"></span>Computing...';
-
-    const fill = document.getElementById('calcProgress');
-    let prog = 0;
-    const interval = setInterval(() => {
-      prog = Math.min(prog + Math.random() * 20, 90);
-      fill.style.width = prog + '%';
-    }, 80);
-
-    setTimeout(() => {
-      clearInterval(interval);
-      fill.style.width = '100%';
-
-      const digits = PI_DIGITS.slice(start - 1, start - 1 + size);
-      calcResult = { digits, start };
-
-      document.getElementById('calcDigits').textContent = digits;
-      document.getElementById('calcMeta').textContent = `Digits ${start.toLocaleString()}–${(start + size - 1).toLocaleString()} · ${size.toLocaleString()} digits`;
-      document.getElementById('calcOutput').style.display = 'block';
-
-      btn.disabled = false;
-      btn.textContent = 'Compute';
-      setTimeout(() => fill.style.width = '0%', 800);
-    }, 400 + Math.random() * 300);
-  }
-
-  function sendCalcToSubmit() {
-    document.getElementById('submitStart').value = calcResult.start;
-    document.getElementById('submitDigits').value = calcResult.digits;
-    document.querySelectorAll('.tab')[1].click();
-    updateDigitPreview();
-    showToast('Digits loaded into submit tab!');
-  }
-
-  function copyCalcDigits() {
-    navigator.clipboard.writeText(calcResult.digits);
-    showToast('Copied to clipboard!');
-  }
-
-  // ── Tab switching ───────────────────────────────────────────────
-  function switchTab(tab) {
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('tab-' + tab).classList.add('active');
-    event.target.classList.add('active');
-    setCookie('crowdpi_tab', tab);
-    if (tab === 'leaderboard') loadLeaderboard();
-    if (tab === 'submit') renderMySubmissions();
-    if (tab === 'visual') loadVisualMap();
-  }
-
-  function showToast(msg, type = '') {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast' + (type ? ' ' + type : '') + ' show';
-    setTimeout(() => t.classList.remove('show'), 3500);
-  }
-
-  // ── Supabase ────────────────────────────────────────────────────
-  async function supabaseFetch(endpoint, options = {}) {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/' + endpoint, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': options.prefer || 'return=representation',
-        ...options.headers
-      },
-      ...options
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || err.hint || 'Supabase error');
-    }
-    return res.json().catch(() => null);
-  }
-
-  // ── Submit ──────────────────────────────────────────────────────
-  async function submitChunk() {
-    const start = parseInt(document.getElementById('submitStart').value);
-    const digits = document.getElementById('submitDigits').value.trim().replace(/\s/g, '');
-    const name = document.getElementById('contributorName').value.trim();
-
-    if (!name) { showToast('Please enter your name or handle', 'error'); return; }
-    if (!digits) { showToast('Please paste your digits', 'error'); return; }
-    if (!/^\d+$/.test(digits)) { showToast('Digits should only contain numbers 0-9', 'error'); return; }
-    if (isNaN(start) || start < 1) { showToast('Invalid start digit', 'error'); return; }
-    // Auto-fix: if start=1 and digits begin with 14159 (missing leading 3), silently prepend it
-    if (start === 1 && digits.slice(0, 5) === '14159') {
-      digits = '3' + digits;
-      document.getElementById('submitDigits').value = digits;
-      showToast('Auto-fixed: prepended missing 3 at digit 1 ✓');
-      updateDigitPreview();
-    }
-
-    const end = start + digits.length - 1;
-    const chunkKey = start + '-' + end;
-
-    // Cookie check — prevent duplicate submission from this browser
-    if (getSubmittedChunks().has(chunkKey)) {
-      showToast('You already submitted digits ' + start.toLocaleString() + '–' + end.toLocaleString() + '!', 'error');
-      return;
-    }
-
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="loading"></span>Checking...';
-    document.getElementById('submitStatus').textContent = '';
-
-    // DB-level check — has this username already submitted this exact range?
-    try {
-      const existing = await supabaseFetch(
-        `pi_submissions?select=id&contributor=eq.${encodeURIComponent(name)}&start_digit=eq.${start}&end_digit=eq.${end}&limit=1`,
-        { prefer: 'return=representation' }
-      );
-      if (existing && existing.length > 0) {
-        showToast(`${name} already submitted this exact range!`, 'error');
-        btn.disabled = false;
-        btn.textContent = 'Submit Chunk';
-        return;
-      }
-    } catch(e) { /* non-fatal, proceed */ }
-
-    btn.innerHTML = '<span class="loading"></span>Submitting...';
-
-    try {
-      await supabaseFetch('pi_submissions', {
-        method: 'POST',
-        body: JSON.stringify({
-          start_digit: start,
-          end_digit: end,
-          chunk_length: digits.length,
-          digits: digits,
-          contributor: name,
-          submitted_at: new Date().toISOString()
-        })
-      });
-
-      // Save to cookies
-      addSubmittedChunk(start, end);
-      saveName(name);
-      addSessionSubmission({ start, end, length: digits.length, time: new Date().toLocaleTimeString() });
-
-      showToast('✓ Chunk submitted! Thank you, ' + name + '!');
-      document.getElementById('submitDigits').value = '';
-      document.getElementById('submitStatus').textContent = '✓ Submitted — digits ' + start.toLocaleString() + '–' + end.toLocaleString();
-      renderMySubmissions();
-      loadStats();
-    } catch (e) {
-      showToast('Error: ' + e.message, 'error');
-      console.error(e);
-    }
-
-    btn.disabled = false;
-    btn.textContent = 'Submit Chunk';
-  }
-
-  // ── My submissions panel ────────────────────────────────────────
-  function renderMySubmissions() {
-    const subs = getSessionSubmissions();
-    const card = document.getElementById('mySubmissionsCard');
-    const tbody = document.getElementById('mySubmissionsBody');
-    if (!subs.length) { card.style.display = 'none'; return; }
-    card.style.display = 'block';
-    tbody.innerHTML = subs.map(s => `
-      <tr>
-        <td><span class="chunk-range">${s.start.toLocaleString()}–${s.end.toLocaleString()}</span></td>
-        <td style="color:var(--muted)">${s.length.toLocaleString()} digits</td>
-        <td style="color:var(--muted);font-size:11px">${s.time}</td>
-      </tr>`).join('');
-  }
-
-  // ── Stats ───────────────────────────────────────────────────────
-  async function loadStats() {
-    try {
-      const data = await supabaseFetch('pi_submissions?select=start_digit,end_digit,contributor&limit=1000');
-      if (!data) return;
-
-      document.getElementById('totalChunks').textContent = data.length.toLocaleString();
-
-      const contributors = new Set(data.map(d => d.contributor));
-      document.getElementById('totalContributors').textContent = contributors.size.toLocaleString();
-
-      const chunkMap = {};
-      data.forEach(d => {
-        const key = d.start_digit + '-' + d.end_digit;
-        chunkMap[key] = (chunkMap[key] || 0) + 1;
-      });
-      const verified = Object.values(chunkMap).filter(c => c >= 3).length;
-      document.getElementById('verifiedChunks').textContent = verified.toLocaleString();
-
-      let totalDigits = 0;
-      Object.keys(chunkMap).forEach(r => {
-        const [s, e] = r.split('-').map(Number);
-        totalDigits += (e - s + 1);
-      });
-      document.getElementById('totalDigits').textContent = totalDigits > 999 ? (totalDigits / 1000).toFixed(1) + 'K' : totalDigits;
-
-    } catch (e) { console.error('Stats error:', e); }
-  }
-
-  // ── Leaderboard ─────────────────────────────────────────────────
-  let currentFilter = 'all';
-
-  // Extract the slice of `sub` that covers [targetStart, targetEnd]
-  function getOverlappingSlice(sub, targetStart, targetEnd) {
-    const overlapStart = Math.max(targetStart, sub.start_digit);
-    const overlapEnd   = Math.min(targetEnd,   sub.end_digit);
-    if (overlapStart > overlapEnd) return null; // no overlap
-    const from = overlapStart - sub.start_digit;
-    const to   = from + (overlapEnd - overlapStart + 1);
-    return sub.digits.slice(from, to);
-  }
-
-  async function loadLeaderboard() {
-    try {
-      const data = await supabaseFetch('pi_submissions?select=start_digit,end_digit,digits,contributor,submitted_at&order=start_digit.asc&limit=500');
-
-      if (!data || data.length === 0) {
-        document.getElementById('leaderboardEmpty').innerHTML = '<div class="empty-pi">π</div><div>No submissions yet — be the first!</div>';
-        document.getElementById('leaderboardEmpty').style.display = 'block';
-        document.getElementById('chunkTable').style.display = 'none';
-        return;
-      }
-
-      const myChunks = getSubmittedChunks();
-
-      // Build unique chunk ranges (deduplicated by exact range first)
-      const chunkMap = {};
-      data.forEach(d => {
-        const key = d.start_digit + '-' + d.end_digit;
-        if (!chunkMap[key]) chunkMap[key] = { start: d.start_digit, end: d.end_digit, submissions: [], contributors: [] };
-        chunkMap[key].submissions.push(d.digits);
-        chunkMap[key].contributors.push(d.contributor);
-      });
-
-      allChunks = Object.values(chunkMap).map(c => {
-        const chunkLen = c.end - c.start + 1;
-
-        // Step 1: collect full-coverage votes (same or larger submissions)
-        // One vote per contributor max — deduplicate at collection time
-        const votes = [];
-        const votedContributors = new Set();
-
-        // Own exact submissions — one per contributor
-        c.submissions.forEach((digits, i) => {
-          const contrib = c.contributors[i];
-          if (votedContributors.has(contrib)) return;
-          votedContributors.add(contrib);
-          votes.push({ digits, contributor: contrib, source: 'exact' });
-        });
-
-        // Cross-votes from larger submissions — one per contributor, skip if already voted exactly
-        data.forEach(other => {
-          if (other.start_digit === c.start && other.end_digit === c.end) return;
-          if (votedContributors.has(other.contributor)) return; // already has an exact vote OR already cross-voted
-          const coversFullRange = other.start_digit <= c.start && other.end_digit >= c.end;
-          if (!coversFullRange) return;
-          const slice = getOverlappingSlice(other, c.start, c.end);
-          if (slice) {
-            votedContributors.add(other.contributor);
-            votes.push({ digits: slice, contributor: other.contributor, source: `${other.start_digit}-${other.end_digit}` });
-          }
-        });
-
-        // Step 2: partial cross-check from SMALLER submissions — one per contributor
-        let partialCoverage = 0;
-        let partialAgreements = 0;
-        const partialContributors = new Set();
-        const partialSeenContributors = new Set();
-
-        data.forEach(other => {
-          if (other.start_digit === c.start && other.end_digit === c.end) return;
-          if (partialSeenContributors.has(other.contributor)) return; // one partial vote per contributor
-          if (votedContributors.has(other.contributor)) return; // already has an exact or full cross-vote — can't self-verify
-          const fullyCovers = other.start_digit <= c.start && other.end_digit >= c.end;
-          if (fullyCovers) return;
-
-          const overlapStart = Math.max(c.start, other.start_digit);
-          const overlapEnd   = Math.min(c.end,   other.end_digit);
-          if (overlapStart > overlapEnd) return;
-
-          const overlapLen = overlapEnd - overlapStart + 1;
-
-          // Slice from c's submission to compare
-          c.submissions.forEach(cDigits => {
-            const cSliceFrom = overlapStart - c.start;
-            const cSlice = cDigits.slice(cSliceFrom, cSliceFrom + overlapLen);
-
-            const otherSliceFrom = overlapStart - other.start_digit;
-            const otherSlice = other.digits.slice(otherSliceFrom, otherSliceFrom + overlapLen);
-
-            if (cSlice && otherSlice) {
-              partialCoverage += overlapLen;
-              if (cSlice === otherSlice) partialAgreements += overlapLen;
-              partialContributors.add(other.contributor);
-              partialSeenContributors.add(other.contributor);
-            }
-          });
-        });
-
-        // Partial coverage % of this chunk that has been verified by smaller subs
-        const partialCoveragePercent = chunkLen > 0 ? Math.round((Math.min(partialCoverage, chunkLen) / chunkLen) * 100) : 0;
-        const partialAccuracy = partialCoverage > 0 ? Math.round((partialAgreements / partialCoverage) * 100) : null;
-
-        // Tally votes (already deduplicated at collection time)
-        const voteCounts = {};
-        votes.forEach(v => voteCounts[v.digits] = (voteCounts[v.digits] || 0) + 1);
-        const maxAgree = votes.length > 0 ? Math.max(...Object.values(voteCounts)) : 0;
-        const total = votes.length;
-        const allAgree = Object.keys(voteCounts).length === 1;
-
-        // Step 4: status — full coverage needed for verified/disputed
-        // partial coverage can upgrade pending → partially_verified
-        let status;
-        if (total >= 3 && allAgree) status = 'verified';
-        else if (total >= 2 && !allAgree) status = 'disputed';
-        else if (partialCoveragePercent >= 100 && partialAccuracy === 100) status = 'verified';
-        else if (partialCoveragePercent > 0) status = 'partial';
-        else status = 'pending';
-
-        const crossVotes = votes.filter(v => v.source !== 'exact');
-        const isMine = myChunks.has(c.start + '-' + c.end);
-
-        return {
-          ...c,
-          votes,
-          crossVotes,
-          maxAgree,
-          total,
-          status,
-          partialCoveragePercent,
-          partialAccuracy,
-          partialContributors: [...partialContributors],
-          isMine
-        };
-      });
-
-      renderLeaderboard();
-    } catch (e) {
-      document.getElementById('leaderboardEmpty').innerHTML = '<div class="empty-pi">π</div><div>Error loading data</div>';
-      console.error(e);
-    }
-  }
-
-  function renderLeaderboard() {
-    const filtered = currentFilter === 'all' ? allChunks : allChunks.filter(c => c.status === currentFilter);
-    const tbody = document.getElementById('chunkTableBody');
-
-    if (filtered.length === 0) {
-      document.getElementById('leaderboardEmpty').style.display = 'block';
-      document.getElementById('leaderboardEmpty').innerHTML = '<div class="empty-pi">π</div><div>No ' + currentFilter + ' chunks yet</div>';
-      document.getElementById('chunkTable').style.display = 'none';
-      return;
-    }
-
-    document.getElementById('leaderboardEmpty').style.display = 'none';
-    document.getElementById('chunkTable').style.display = 'table';
-
-    tbody.innerHTML = filtered.map((c, i) => {
-      const conf = Math.round((c.maxAgree / Math.max(c.total, 3)) * 100);
-      const confColor = c.status === 'verified' ? 'var(--verified)'
-                      : c.status === 'disputed' ? 'var(--disputed)'
-                      : c.status === 'partial'  ? '#5fd4b0'
-                      : 'var(--pending)';
-      const uniqueContribs = [...new Set(c.contributors)].slice(0, 3).join(', ') + (c.contributors.length > 3 ? '...' : '');
-      const myTag = c.isMine ? ' <span style="color:var(--accent);font-size:9px;letter-spacing:1px">★ YOU</span>' : '';
-      const partialTag = c.status === 'partial' && c.partialCoveragePercent > 0
-        ? ` <span style="color:#5fd4b0;font-size:9px">${c.partialCoveragePercent}% checked</span>` : '';
-
-      // Majority digits for preview — from votes
-      const voteCounts = {};
-      c.votes.forEach(v => voteCounts[v.digits] = (voteCounts[v.digits] || 0) + 1);
-      const majorityEntry = Object.entries(voteCounts).sort((a,b) => b[1]-a[1])[0];
-      const majorityDigits = majorityEntry?.[0] || '';
-      const preview10 = majorityDigits.slice(0, 10) || '—';
-      const crossCount = c.crossVotes?.length || 0;
-      const crossTag = crossCount > 0 ? ` <span style="color:var(--accent);font-size:9px">+${crossCount} cross</span>` : '';
-
-      const digitDisplay = c.status === 'disputed'
-        ? `<span style="color:var(--disputed);font-size:11px;letter-spacing:1px">${preview10}…</span>`
-        : `<span style="color:var(--muted);font-size:11px;letter-spacing:1px">${preview10}…</span>`;
-
-      // Build per-contributor expanded rows
-      const expandId = 'expand-' + i;
-
-      return `
-        <tr style="${c.isMine ? 'background:rgba(127,255,212,0.03)' : ''};cursor:pointer" onclick="toggleExpand('${expandId}', this)">
-          <td><span class="chunk-range">${c.start.toLocaleString()}–${c.end.toLocaleString()}</span>${myTag}</td>
-          <td style="color:var(--muted);font-size:11px">${uniqueContribs} <span style="color:var(--border)">(${c.total})</span>${crossTag}${partialTag}</td>
-          <td>${digitDisplay}</td>
-          <td>
-            <div class="confidence-bar">
-              <div class="conf-track"><div class="conf-fill" style="width:${conf}%;background:${confColor}"></div></div>
-              <span style="font-size:10px;color:${confColor};min-width:28px">${conf}%</span>
-            </div>
-          </td>
-          <td><span class="badge badge-${c.status}">${c.status}</span></td>
-        </tr>
-        <tr id="${expandId}" style="display:none">
-          <td colspan="5" style="padding:12px 12px 16px;background:rgba(0,0,0,0.2);">
-            <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">All submissions for digits ${c.start.toLocaleString()}–${c.end.toLocaleString()}</div>
-            ${c.partialCoveragePercent > 0 && c.status !== 'verified' ? `<div style="font-size:11px;color:#5fd4b0;margin-bottom:10px;padding:8px;background:rgba(127,255,212,0.05);border:1px solid rgba(127,255,212,0.15);border-radius:2px;">⬡ ${c.partialCoveragePercent}% of this chunk cross-checked by smaller submissions from ${c.partialContributors.join(', ')} — ${c.partialAccuracy}% agreement</div>` : ''}
-            ${expandSubs(c)}
-          </td>
-        </tr>`;
-    }).join('');
-  }
-
-  function expandSubs(c) {
-    // Group votes by digit content
-    const voteCounts = {};
-    c.votes.forEach(v => {
-      if (!voteCounts[v.digits]) voteCounts[v.digits] = { count: 0, contributors: [], sources: [] };
-      voteCounts[v.digits].count++;
-      voteCounts[v.digits].contributors.push(v.contributor);
-      voteCounts[v.digits].sources.push(v.source);
-    });
-
-    return Object.entries(voteCounts).map(([digits, info]) => {
-      const preview100 = digits.slice(0, 100);
-      const isFakeish = /^(.)\1{9,}/.test(digits);
-      const fakeWarning = isFakeish ? ' <span style="color:var(--disputed);font-size:9px">⚠ POSSIBLY FAKE</span>' : '';
-      const uniqueC = [...new Set(info.contributors)].join(', ');
-      const crossSources = info.sources.filter(s => s !== 'exact');
-      const crossNote = crossSources.length > 0
-        ? `<span style="color:var(--accent);font-size:9px;margin-left:6px">+ ${crossSources.length} cross-verified from larger chunk${crossSources.length > 1 ? 's' : ''}</span>`
-        : '';
-      return `
-        <div style="margin-bottom:10px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:2px;">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;">
-            <span>By <strong style="color:var(--text)">${uniqueC}</strong> · ${info.count} vote${info.count>1?'s':''}${fakeWarning}${crossNote}</span>
-          </div>
-          <div style="font-size:12px;letter-spacing:1px;word-break:break-all;color:var(--accent);line-height:1.8">${preview100}${digits.length > 100 ? '<span style="color:var(--muted)">…</span>' : ''}</div>
-          ${digits.length > 100 ? `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 10px;font-size:10px" onclick="event.stopPropagation();showFullDigitsModal(${c.start},${c.end})">See all ${digits.length.toLocaleString()} digits</button>` : ''}
-        </div>`;
-    }).join('');
-  }
-
-  // Store full digits so modal can access them without inline template literals
-  const allDigitsStore = {};
-
-  function toggleExpand(id, row) {
-    const expandRow = document.getElementById(id);
-    const isOpen = expandRow.style.display !== 'none';
-    expandRow.style.display = isOpen ? 'none' : 'table-row';
-    row.style.background = (!isOpen && !row.style.background.includes('212')) ? 'rgba(127,255,212,0.05)' : '';
-  }
-
-  function showFullDigitsModal(start, end, digits) {
-    event.stopPropagation();
-    // Store digits for this chunk
-    const key = start + '-' + end;
-    // Build modal
-    let modal = document.getElementById('digitsModal');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'digitsModal';
-      modal.style.cssText = `
-        position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;
-        display:flex;align-items:center;justify-content:center;padding:24px;
-      `;
-      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-      document.body.appendChild(modal);
-    }
-
-    // Find full digits from allChunks
-    const chunk = allChunks.find(c => c.start == start && c.end == end);
-    const fullDigits = chunk ? (chunk.submissions.find(s => s.slice(0,8) === String(digits).slice(0,8)) || chunk.submissions[0]) : String(digits);
-
-    modal.innerHTML = `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:24px;max-width:700px;width:100%;max-height:80vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <div>
-            <div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Full Submission</div>
-            <div style="font-size:14px;color:var(--accent);margin-top:4px">Digits ${Number(start).toLocaleString()}–${Number(end).toLocaleString()}</div>
-          </div>
-          <button class="btn btn-secondary" style="padding:4px 12px" onclick="document.getElementById('digitsModal').remove()">✕ Close</button>
-        </div>
-        <div style="font-size:12px;letter-spacing:1px;word-break:break-all;line-height:2;color:var(--text);background:var(--bg);padding:16px;border-radius:2px;border:1px solid var(--border);">${fullDigits}</div>
-        <div style="margin-top:12px;display:flex;gap:8px;">
-          <button class="btn btn-secondary" style="font-size:11px;padding:6px 14px" onclick="navigator.clipboard.writeText('${fullDigits}');showToast('Copied!')">Copy digits</button>
-          <span style="font-size:11px;color:var(--muted);align-self:center">${fullDigits.length.toLocaleString()} digits total</span>
-        </div>
-      </div>`;
-  }
-
-  function filterChunks(filter, btn) {
-    currentFilter = filter;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderLeaderboard();
-  }
-
-  // Init
-  loadStats();
+    renderTimeline(data);
+  }catch(e){mapEl.innerHTML='<span style="color:var(--accent2);font-size:11px">Error</span>'}
+}
+
+function renderTimeline(data){
+  const chart=document.getElementById('timelineChart'),empty=document.getElementById('timelineEmpty');chart.innerHTML='';
+  if(!data||!data.length){chart.style.display='none';empty.style.display='block';return}
+  const byDay={};data.forEach(d=>{const day=(d.submitted_at||'?').slice(0,10);byDay[day]=(byDay[day]||0)+1});
+  const days=Object.keys(byDay).sort(),max=Math.max(...Object.values(byDay));
+  chart.style.display='flex';empty.style.display='none';
+  days.forEach(day=>{const count=byDay[day],h=Math.max(4,Math.round((count/max)*64)),bar=document.createElement('div');bar.style.cssText=`flex:1;min-width:8px;max-width:24px;height:${h}px;background:var(--accent);opacity:.6;border-radius:2px 2px 0 0;transition:opacity .2s`;bar.title=`${day}: ${count}`;bar.addEventListener('mouseenter',()=>bar.style.opacity='1');bar.addEventListener('mouseleave',()=>bar.style.opacity='.6');chart.appendChild(bar)});
+}
+
+function switchTab(tab,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');btn.classList.add('active');
+  setCk('cp_tab',tab);
+  if(tab==='leaderboard')loadLeaderboard();
+  if(tab==='submit')renderMySessionSubs();
+  if(tab==='visual')loadVisualMap();
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const n=getSavedName();if(n)document.getElementById('subName').value=n;
+  const lt=getCk('cp_tab');
+  if(lt){const b=[...document.querySelectorAll('.tab')].find(t=>t.getAttribute('onclick')?.includes("'"+lt+"'"));if(b)b.click()}
+  renderMySessionSubs();
+});
+loadStats();
+loadGTRanges();
 </script>
 
 </body>
